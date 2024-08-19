@@ -246,3 +246,31 @@ TEST_CASE("diff") {
     }
     std::cout << "EVERYTHING OK!" << std::endl;
 }
+
+TEST_CASE("save_load") {
+    std::vector<uint64_t> seq = bits::test::get_sorted_sequence(sequence_length);
+    constexpr bool index_zeros = true;
+    constexpr bool encode_prefix_sum = false;
+    using ef_type = elias_fano<index_zeros, encode_prefix_sum>;
+    ef_type ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
+    const std::string output_filename("ef.bin");
+    uint64_t num_saved_bytes = essentials::save(ef, output_filename.c_str());
+    std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    ef_type ef_loaded;
+    uint64_t num_loaded_bytes = essentials::load(ef_loaded, output_filename.c_str());
+    std::cout << "num_loaded_bytes = " << num_loaded_bytes << std::endl;
+    REQUIRE(num_saved_bytes == num_loaded_bytes);
+    std::cout << "checking correctness of iterator..." << std::endl;
+    auto it = ef_loaded.begin();
+    uint64_t i = 0;
+    while (it.has_next()) {
+        uint64_t got = it.next();  // get next integer
+        uint64_t expected = seq[i];
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
+                                                << sequence_length << " but expected " << expected);
+        ++i;
+    }
+    assert(i == sequence_length);
+    std::cout << "EVERYTHING OK!" << std::endl;
+    std::remove(output_filename.c_str());
+}
