@@ -274,3 +274,33 @@ TEST_CASE("save_load") {
     std::cout << "EVERYTHING OK!" << std::endl;
     std::remove(output_filename.c_str());
 }
+
+TEST_CASE("build_from_compact_vector_iterator") {
+    std::vector<uint64_t> seq = bits::test::get_sorted_sequence(sequence_length);
+    constexpr bool index_zeros = true;
+    constexpr bool encode_prefix_sum = false;
+    std::cout << "encoding them with elias_fano<index_zeros=" << index_zeros
+              << ", encode_prefix_sum=" << encode_prefix_sum << ">..." << std::endl;
+    elias_fano<index_zeros, encode_prefix_sum> ef;
+    {
+        compact_vector cv;
+        cv.build(seq.begin(), seq.size());
+        ef.encode(cv.begin(), cv.size());
+        assert(ef.size() == seq.size());
+        std::cout << "cv.width() = " << cv.width() << '\n';
+        std::cout << "ef.size() = " << ef.size() << '\n';
+        std::cout << "ef.back() = " << ef.back() << '\n';
+        std::cout << "measured bits/int = " << (8.0 * ef.num_bytes()) / ef.size() << std::endl;
+    }
+    auto it = ef.begin();
+    uint64_t i = 0;
+    while (it.has_next()) {
+        uint64_t got = it.next();  // get next integer
+        uint64_t expected = seq[i];
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
+                                                << sequence_length << " but expected " << expected);
+        ++i;
+    }
+    assert(i == sequence_length);
+    std::cout << "EVERYTHING OK!" << std::endl;
+}

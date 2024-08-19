@@ -28,7 +28,7 @@ struct elias_fano {
             for (uint64_t i = 0; i != n; ++i, ++tmp) m_universe += *tmp;
             n = n + 1;  // because a zero is added at the beginning
         } else {
-            if constexpr (std::is_same_v<typename std::iterator_traits<Iterator>::iterator_category,
+            if constexpr (std::is_same_v<typename Iterator::iterator_category,
                                          std::random_access_iterator_tag>) {
                 m_universe = *(begin + (n - 1));
             } else {  // scan
@@ -104,9 +104,10 @@ struct elias_fano {
             assert(good() and has_next());
             uint64_t high = m_high_enum.next();
             assert(high == m_ef->m_high_bits_d1.select(m_ef->m_high_bits, m_pos));
-            uint64_t low = m_low_enum.value();
+            uint64_t low = *m_low_enum;
             uint64_t val = (((high - m_pos) << m_l) | low);
             ++m_pos;
+            ++m_low_enum;
             return val;
         }
 
