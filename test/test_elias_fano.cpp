@@ -36,13 +36,21 @@ int main(int argc, char const** argv) {
     // n = vec.size();
     // universe = vec.back();
 
-    /* Elias-Fano requires the sequence to be non-decreasing. */
+    // std::vector<uint32_t> vec{0, 0, 0, 0, 0, 1, 1, 1, 1, 6, 6, 9, 13, 23, 23, 23, 45, 45, 88,
+    // 88}; n = vec.size(); universe = vec.back();
+
+    // std::vector<uint32_t> vec{3, 3, 6, 6, 9, 13, 23, 23, 23, 45, 45, 88, 88};
+    // n = vec.size();
+    // universe = vec.back();
+
     assert(vec.back() == universe);
     assert(std::is_sorted(vec.begin(), vec.end()));
 
-    std::cout << "encoding them with Elias-Fano..." << std::endl;
     constexpr bool index_zeros = true;
     constexpr bool encode_prefix_sum = false;
+
+    std::cout << "encoding them with elias_fano<index_zeros=" << index_zeros
+              << ", encode_prefix_sum=" << encode_prefix_sum << ">..." << std::endl;
     elias_fano<index_zeros, encode_prefix_sum> ef;
     ef.encode(vec.begin(), vec.size());
 
@@ -108,7 +116,7 @@ int main(int argc, char const** argv) {
 
         std::cout << "checking correctness of next_geq..." << std::endl;
         for (i = 0; i != 10000; ++i) {
-            uint64_t x = vec[rand() % n] + 877;  // get some value
+            uint64_t x = vec[rand() % n] + (i % 2 == 0 ? 3 : -3);  // get some value
             auto [pos, got] = ef.next_geq(x);
             auto it = std::lower_bound(vec.begin(), vec.end(), x);
             if (it != vec.end()) {
@@ -160,9 +168,18 @@ int main(int argc, char const** argv) {
         std::cout << "EVERYTHING OK!" << std::endl;
 
         std::cout << "checking correctness of prev_leq..." << std::endl;
+        const uint64_t front = ef.access(0);
         for (i = 0; i != 10000; ++i) {
-            uint64_t x = vec[rand() % n] + 877;  // get some value
+            uint64_t x = vec[rand() % n] + (i % 2 == 0 ? 3 : -3);  // get some value
             auto pos = ef.prev_leq(x);
+            if (x < front) {
+                if (pos != uint64_t(-1)) {
+                    std::cout << "expected pos " << uint64_t(-1) << " but got pos = " << pos
+                              << std::endl;
+                    return 1;
+                }
+                continue;
+            }
             auto got = pos < ef.size() ? ef.access(pos) : ef.back();
             auto it = std::upper_bound(vec.begin(), vec.end(), x) - 1;
             uint64_t expected = *it;
@@ -172,6 +189,36 @@ int main(int argc, char const** argv) {
                           << expected << " at position " << pos_expected << std::endl;
                 return 1;
             }
+        }
+        std::cout << "EVERYTHING OK!" << std::endl;
+    }
+
+    {
+        // test encode_prefix_sum and diff()
+        std::cout << "generating other " << n << " integers destributed as Poisson(mean=" << mean
+                  << ")..." << std::endl;
+        std::generate(vec.begin(), vec.end(), [&]() { return distr(rng); });
+        constexpr bool index_zeros = true;
+        constexpr bool encode_prefix_sum = true;
+        std::cout << "encoding them with elias_fano<index_zeros=" << index_zeros
+                  << ", encode_prefix_sum=" << encode_prefix_sum << ">..." << std::endl;
+        elias_fano<index_zeros, encode_prefix_sum> ef;
+        ef.encode(vec.begin(), vec.size());
+        assert(ef.size() == vec.size() + 1);
+        std::cout << "ef.size() = " << ef.size() << '\n';
+        std::cout << "ef.back() = " << ef.back() << '\n';
+        std::cout << "measured bits/int = " << (8.0 * ef.num_bytes()) / ef.size() << std::endl;
+        std::cout << "checking correctness of diff..." << std::endl;
+        uint64_t i = 0;
+        for (auto x : vec) {
+            uint64_t got = ef.diff(i);  // get the integer at position i
+            uint64_t expected = x;
+            if (got != expected) {
+                std::cout << "got " << got << " at position " << i << "/" << n << " but expected "
+                          << expected << std::endl;
+                return 1;
+            }
+            ++i;
         }
         std::cout << "EVERYTHING OK!" << std::endl;
     }

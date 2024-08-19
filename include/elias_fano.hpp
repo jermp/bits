@@ -8,7 +8,12 @@
 
 namespace bits {
 
-template <bool index_zeros = false, bool encode_prefix_sum = false>
+template <  //
+    /* build a succinct select index on the zeros of high_bits for efficient next_neq */
+    bool index_zeros = false,  //
+    /* if encode_prefix_sum = false, the sequence is assumed to be sorted */
+    bool encode_prefix_sum = false  //
+    >
 struct elias_fano {
     elias_fano() : m_universe(0) {}
 
@@ -21,7 +26,7 @@ struct elias_fano {
         if constexpr (encode_prefix_sum) {
             auto tmp = begin;
             for (uint64_t i = 0; i != n; ++i, ++tmp) m_universe += *tmp;
-            n = n + 1;  // because I will add a zero at the beginning
+            n = n + 1;  // because a zero is added at the beginning
         } else {
             if constexpr (std::is_same_v<typename std::iterator_traits<Iterator>::iterator_category,
                                          std::random_access_iterator_tag>) {
@@ -69,7 +74,7 @@ struct elias_fano {
                 throw std::runtime_error("sequence is not sorted");
             }
             if (l) cv_builder_low_bits.push_back(v & low_mask);
-            bvb_high_bits.set((v >> l) + i, 1);
+            bvb_high_bits.set((v >> l) + i + encode_prefix_sum, 1);
             last = v;
         }
 
@@ -154,13 +159,14 @@ struct elias_fano {
 
     /*
         Return [position,value] of the leftmost element that is >= x.
-        Return [size()-1,back()] if x >= back() (largest element).
+        Return [size()-1,back()] if x > back() (largest element).
     */
     inline std::pair<uint64_t, uint64_t> next_geq(uint64_t x) const { return next_geq_leftmost(x); }
 
     /*
         Return the position of the rightmost largest element <= x.
         Return size()-1 if x >= back() (largest element).
+        If x < front(), then pos = -1 (result is undefined).
     */
     inline uint64_t prev_leq(uint64_t x) const {
         if (x >= back()) return size() - 1;
@@ -210,7 +216,7 @@ private:
         static_assert(index_zeros == true, "must build index on zeros");
         assert(m_high_bits_d0.num_positions());
 
-        if (x >= back()) return {size() - 1, back()};
+        if (x > back()) return {size() - 1, back()};
 
         uint64_t h_x = x >> m_low_bits.width();
         uint64_t begin = h_x ? m_high_bits_d0.select(m_high_bits, h_x - 1) - h_x + 1 : 0;
