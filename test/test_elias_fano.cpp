@@ -284,7 +284,9 @@ TEST_CASE("build_from_compact_vector_iterator") {
     elias_fano<index_zeros, encode_prefix_sum> ef;
     {
         compact_vector cv;
-        cv.build(seq.begin(), seq.size());
+        const uint64_t max = seq.back();
+        uint64_t width = max == 0 ? 1 : std::ceil(std::log2(max + 1));
+        cv.build(seq.begin(), seq.size(), width);
         ef.encode(cv.begin(), cv.size());
         assert(ef.size() == seq.size());
         std::cout << "cv.width() = " << cv.width() << '\n';

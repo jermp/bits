@@ -211,16 +211,15 @@ struct compact_vector {
     }
 
     uint64_t back() const { return operator[](size() - 1); }
-    inline uint64_t size() const { return m_size; }
-    inline uint64_t width() const { return m_width; }
+    uint64_t size() const { return m_size; }
+    uint64_t width() const { return m_width; }
+    std::vector<uint64_t> const& bits() const { return m_data; }
 
     typedef enumerator<compact_vector> iterator;
 
     iterator begin() const { return iterator(this); }
     iterator end() const { return iterator(this, size()); }
     iterator at(uint64_t pos) const { return iterator(this, pos); }
-
-    std::vector<uint64_t> const& bits() const { return m_data; }
 
     uint64_t num_bytes() const {
         return sizeof(m_size) + sizeof(m_width) + sizeof(m_mask) + essentials::vec_bytes(m_data);
