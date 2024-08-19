@@ -158,18 +158,41 @@ struct elias_fano {
     }
 
     /*
-        Return [position,value] of the leftmost element that is >= x.
-        Return [size()-1,back()] if x > back() (largest element).
+        Return [position,value] of the leftmost smallest element that is >= x.
+        Return [size()-1,back()] if x > back().
+
+        Example.
+
+        1, 3, 3, 4, 5, 6, 6, 9, 12, 14, 17, 17
+        0  1  2  3  4  5  6  7   8   9  10  11
+
+        next_geq(0) = [0,1]
+        next_geq(3) = [1,3]
+        next_geq(6) = [5,6]
+        next_geq(7) = [7,9]
+        next_geq(17) = [10,17]
+        next_geq(23) = [11,17] (saturate)
     */
     inline std::pair<uint64_t, uint64_t> next_geq(uint64_t x) const { return next_geq_leftmost(x); }
 
     /*
-        Return the position of the rightmost largest element <= x.
-        Return size()-1 if x >= back() (largest element).
-        If x < front(), then pos = -1 (result is undefined).
+        Return the position of the rightmost largest element that is <= x.
+        Return size()-1 if x >= back().
+        Return -1 if x < front() (result is undefined).
+
+        Example.
+
+        1, 3, 3, 4, 5, 6, 6, 9, 12, 14, 17, 17
+        0  1  2  3  4  5  6  7   8   9  10  11
+
+        prev_leq(0) = -1 (undefined)
+        prev_leq(3) = 2
+        prev_leq(6) = 6
+        prev_leq(7) = 6
+        prev_leq(17) = 11
+        prev_leq(23) = 11 (saturate)
     */
     inline uint64_t prev_leq(uint64_t x) const {
-        if (x >= back()) return size() - 1;
         auto [pos, val] = next_geq_rightmost(x);
         return pos - (val > x);
     }
@@ -209,8 +232,8 @@ private:
     }
 
     /*
-        Return [position,value] of the leftmost element that is >= x.
-        Return [size()-1,back()] if x >= back() (largest element).
+        Return [position,value] of the leftmost smallest element that is >= x.
+        Return [size()-1,back()] if x > back().
     */
     inline std::pair<uint64_t, uint64_t> next_geq_leftmost(uint64_t x) const {
         static_assert(index_zeros == true, "must build index on zeros");
@@ -242,8 +265,8 @@ private:
     }
 
     /*
-        Return [position,value] of the rightmost element that is >= x.
-        Return [size(),back()] if x > back() (largest element).
+        Return [position,value] of the rightmost smallest element that is >= x.
+        Return [size()-1,back()] if x >= back().
     */
     inline std::pair<uint64_t, uint64_t> next_geq_rightmost(uint64_t x) const {
         auto [pos, val] = next_geq_leftmost(x);
@@ -252,9 +275,10 @@ private:
             val = it.next();
             while (val == x) {  // keep scanning to pick the rightmost one
                 ++pos;
+                if (pos == size()) break;
                 val = it.next();
             }
-            assert(val > x);
+            assert(val >= x);
             return {pos - 1, x};
         }
         return {pos, val};

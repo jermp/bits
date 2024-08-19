@@ -43,6 +43,10 @@ int main(int argc, char const** argv) {
     // n = vec.size();
     // universe = vec.back();
 
+    // std::vector<uint32_t> vec{1, 3, 3, 4, 5, 6, 6, 9, 12, 14, 17, 17};
+    // n = vec.size();
+    // universe = vec.back();
+
     assert(vec.back() == universe);
     assert(std::is_sorted(vec.begin(), vec.end()));
 
@@ -97,6 +101,7 @@ int main(int argc, char const** argv) {
         for (auto x : vec) {
             /* since x is in the sequence, next_geq must return (i,x) */
             auto [pos, got] = ef.next_geq(x);
+            // std::cout << "x=" << x << "; pos=" << pos << "; got=" << got << std::endl;
             uint64_t expected = vec[i];
 
             /* if we have some repeated values, next_neq will return the leftmost occurrence */
@@ -118,6 +123,7 @@ int main(int argc, char const** argv) {
         for (i = 0; i != 10000; ++i) {
             uint64_t x = vec[rand() % n] + (i % 2 == 0 ? 3 : -3);  // get some value
             auto [pos, got] = ef.next_geq(x);
+            // std::cout << "x=" << x << "; pos=" << pos << "; got=" << got << std::endl;
             auto it = std::lower_bound(vec.begin(), vec.end(), x);
             if (it != vec.end()) {
                 uint64_t expected = *it;
@@ -151,7 +157,7 @@ int main(int argc, char const** argv) {
             auto pos = ef.prev_leq(x);
             auto got = ef.access(pos);
             uint64_t expected = vec[i];
-
+            // std::cout << "x=" << x << "; pos=" << pos << "; got=" << got << std::endl;
             /* if we have some repeated values, prev_leq will return the rightmost occurrence */
             if (pos > 0 and vec[pos] == vec[pos - 1]) {
                 i = pos + 1;
@@ -181,6 +187,7 @@ int main(int argc, char const** argv) {
                 continue;
             }
             auto got = pos < ef.size() ? ef.access(pos) : ef.back();
+            // std::cout << "x=" << x << "; pos=" << pos << "; got=" << got << std::endl;
             auto it = std::upper_bound(vec.begin(), vec.end(), x) - 1;
             uint64_t expected = *it;
             uint64_t pos_expected = std::distance(vec.begin(), it);
