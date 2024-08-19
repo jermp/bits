@@ -9,37 +9,38 @@
 
 namespace bits::util {
 
-inline uint8_t msb(uint64_t x) {
-    assert(x);
-    unsigned long ret = -1U;
-    if (x) { ret = (unsigned long)(63 - __builtin_clzll(x)); }
-    return (uint8_t)ret;
+/*
+    Good reference for built-in functions:
+    http://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
+*/
+
+/* return the position of the most significant bit (msb) */
+static uint32_t msb(uint32_t x) {
+    assert(x > 0);                 // if x is 0, the result is undefined
+    return 31 - __builtin_clz(x);  // count leading zeros (clz)
+}
+static uint32_t msbll(uint64_t x) {
+    assert(x > 0);                   // if x is 0, the result is undefined
+    return 63 - __builtin_clzll(x);  // count leading zeros (clz)
 }
 
-inline bool bsr64(unsigned long* const index, const uint64_t mask) {
-    if (mask) {
-        *index = (unsigned long)(63 - __builtin_clzll(mask));
-        return true;
-    } else {
-        return false;
-    }
+static inline uint32_t ceil_log2_uint32(uint32_t x) { return (x > 1) ? msb(x - 1) + 1 : 0; }
+
+/* return the position of the least significant bit (lsb) */
+static uint32_t lsb(uint32_t x) {
+    assert(x > 0);            // if x is 0, the result is undefined
+    return __builtin_ctz(x);  // count trailing zeros (ctz)
 }
-
-inline uint8_t msb(uint64_t x, unsigned long& ret) { return bsr64(&ret, x); }
-
-inline uint8_t lsb(uint64_t x, unsigned long& ret) {
+static uint64_t lsbll(uint64_t x) {
+    assert(x > 0);              // if x is 0, the result is undefined
+    return __builtin_ctzll(x);  // count trailing zeros (ctz)
+}
+inline bool lsbll(uint64_t x, uint64_t& ret) {
     if (x) {
-        ret = (unsigned long)__builtin_ctzll(x);
+        ret = __builtin_ctzll(x);
         return true;
     }
     return false;
-}
-
-inline uint8_t lsb(uint64_t x) {
-    assert(x);
-    unsigned long ret = -1U;
-    lsb(x, ret);
-    return (uint8_t)ret;
 }
 
 inline uint64_t popcount(uint64_t x) {

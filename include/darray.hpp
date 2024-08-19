@@ -20,8 +20,8 @@ struct darray {
         for (uint64_t word_idx = 0; word_idx < data.size(); ++word_idx) {
             uint64_t cur_pos = word_idx << 6;
             uint64_t cur_word = WordGetter()(data, word_idx);
-            unsigned long l;
-            while (util::lsb(cur_word, l)) {
+            uint64_t l;
+            while (util::lsbll(cur_word, l)) {
                 cur_pos += l;
                 cur_word >>= l;
                 if (cur_pos >= bv.num_bits()) break;

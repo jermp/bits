@@ -50,15 +50,15 @@ struct elias_fano {
             A. It depends on the indexes built on the high_bits.
         */
 
-        bit_vector_builder bvb_high_bits(n + (m_universe >> l) + 1);
-        compact_vector::builder cv_builder_low_bits(n, l);
+        bit_vector::builder bvb_high_bits(n + (m_universe >> l) + 1);
+        compact_vector::builder cvb_low_bits(n, l);
 
         uint64_t low_mask = (uint64_t(1) << l) - 1;
         uint64_t last = 0;
 
         // add a zero at the beginning
         if constexpr (encode_prefix_sum) {
-            if (l) cv_builder_low_bits.push_back(0);
+            if (l) cvb_low_bits.push_back(0);
             bvb_high_bits.set(0, 1);
             n = n - 1;  // restore n
         }
@@ -73,13 +73,13 @@ struct elias_fano {
                 std::cerr << "current " << v << "\n";
                 throw std::runtime_error("sequence is not sorted");
             }
-            if (l) cv_builder_low_bits.push_back(v & low_mask);
+            if (l) cvb_low_bits.push_back(v & low_mask);
             bvb_high_bits.set((v >> l) + i + encode_prefix_sum, 1);
             last = v;
         }
 
-        bit_vector(&bvb_high_bits).swap(m_high_bits);
-        cv_builder_low_bits.build(m_low_bits);
+        bvb_high_bits.build(m_high_bits);
+        cvb_low_bits.build(m_low_bits);
         m_high_bits_d1.build(m_high_bits);
         if constexpr (index_zeros) m_high_bits_d0.build(m_high_bits);
     }
