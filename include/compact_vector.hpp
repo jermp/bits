@@ -151,7 +151,7 @@ struct compact_vector {
             builder().swap(*this);
         }
 
-        void swap(compact_vector::builder& other) {
+        void swap(builder& other) {
             std::swap(m_size, other.m_size);
             std::swap(m_width, other.m_width);
             std::swap(m_mask, other.m_mask);

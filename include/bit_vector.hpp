@@ -29,9 +29,16 @@ struct bit_vector {
             m_data.reserve(essentials::words_for<uint64_t>(num_bits));
         }
 
-        void build(bit_vector& in) {
-            in.m_num_bits = m_num_bits;
-            in.m_data.swap(m_data);
+        void build(bit_vector& bv) {
+            bv.m_num_bits = m_num_bits;
+            bv.m_data.swap(m_data);
+            builder().swap(*this);
+        }
+
+        void swap(builder& other) {
+            std::swap(m_num_bits, other.m_num_bits);
+            std::swap(m_cur_word, other.m_cur_word);
+            m_data.swap(other.m_data);
         }
 
         inline void push_back(bool b) {
@@ -123,12 +130,6 @@ struct bit_vector {
                 if (cur_word < &m_data.back()) *++cur_word = rhs.m_data.back() >> (64 - shift);
             }
             m_cur_word = &m_data.back();
-        }
-
-        void swap(builder& other) {
-            m_data.swap(other.m_data);
-            std::swap(m_num_bits, other.m_num_bits);
-            std::swap(m_cur_word, other.m_cur_word);
         }
 
         uint64_t num_bits() const { return m_num_bits; }
