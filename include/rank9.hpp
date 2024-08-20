@@ -4,17 +4,18 @@
 
 namespace bits {
 
-struct ranked_bit_vector : public bit_vector {
-    ranked_bit_vector() : bit_vector() {}
+struct rank9 {
+    rank9() {}
 
-    void build_index() {
+    void build(bit_vector const& bv) {
+        std::vector<uint64_t> const& data = bv.data();
         std::vector<uint64_t> block_rank_pairs;
         uint64_t next_rank = 0;
         uint64_t cur_subrank = 0;
         uint64_t subranks = 0;
         block_rank_pairs.push_back(0);
-        for (uint64_t i = 0; i < m_data.size(); ++i) {
-            uint64_t word_pop = util::popcount(m_data[i]);
+        for (uint64_t i = 0; i < data.size(); ++i) {
+            uint64_t word_pop = util::popcount(data[i]);
             uint64_t shift = i % block_size;
             if (shift) {
                 subranks <<= 9;
@@ -30,14 +31,14 @@ struct ranked_bit_vector : public bit_vector {
                 cur_subrank = 0;
             }
         }
-        uint64_t left = block_size - m_data.size() % block_size;
+        uint64_t left = block_size - data.size() % block_size;
         for (uint64_t i = 0; i < left; ++i) {
             subranks <<= 9;
             subranks |= cur_subrank;
         }
         block_rank_pairs.push_back(subranks);
 
-        if (m_data.size() % block_size) {
+        if (data.size() % block_size) {
             block_rank_pairs.push_back(next_rank);
             block_rank_pairs.push_back(0);
         }
@@ -46,46 +47,44 @@ struct ranked_bit_vector : public bit_vector {
     }
 
     inline uint64_t num_ones() const { return *(m_block_rank_pairs.end() - 2); }
-    inline uint64_t num_zeros() const { return num_bits() - num_ones(); }
 
     /*
         Return the number of ones in B[0..i).
     */
-    inline uint64_t rank1(uint64_t i) const {
-        assert(i <= num_bits());
-        if (i == num_bits()) return num_ones();
+    inline uint64_t rank1(bit_vector const& bv, uint64_t i) const {
+        assert(i <= bv.num_bits());
+        if (i == bv.num_bits()) return num_ones();
         uint64_t sub_block = i / 64;
         uint64_t r = sub_block_rank(sub_block);
         uint64_t sub_left = i % 64;
-        if (sub_left) r += util::popcount(m_data[sub_block] << (64 - sub_left));
+        if (sub_left) {
+            std::vector<uint64_t> const& data = bv.data();
+            r += util::popcount(data[sub_block] << (64 - sub_left));
+        }
         return r;
     }
 
     /*
         Return the number of zeros in B[0..i).
     */
-    inline uint64_t rank0(uint64_t i) const {
-        assert(i <= num_bits());
-        return i - rank1(i);
+    inline uint64_t rank0(bit_vector const& bv, uint64_t i) const {
+        assert(i <= bv.num_bits());
+        return i - rank1(bv, i);
     }
 
-    uint64_t num_bytes() const {
-        return bit_vector::num_bytes() + essentials::vec_bytes(m_block_rank_pairs);
-    }
+    uint64_t num_bytes() const { return essentials::vec_bytes(m_block_rank_pairs); }
 
     template <typename Visitor>
     void visit(Visitor& visitor) {
-        bit_vector::visit(visitor);
         visit_impl(visitor, *this);
     }
 
     template <typename Visitor>
     void visit(Visitor& visitor) const {
-        bit_vector::visit(visitor);
         visit_impl(visitor, *this);
     }
 
-protected:
+private:
     template <typename Visitor, typename T>
     static void visit_impl(Visitor& visitor, T&& t) {
         visitor.visit(t.m_block_rank_pairs);

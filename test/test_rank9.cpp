@@ -1,38 +1,41 @@
 #include "common.hpp"
-#include "include/ranked_bit_vector.hpp"
+#include "include/rank9.hpp"
 
 constexpr uint64_t num_positions = 10000;
 
-ranked_bit_vector encode_with_ranked_bit_vector(std::vector<uint64_t> const& seq) {
+std::pair<bit_vector, rank9> encode_with_ranked_bit_vector(std::vector<uint64_t> const& seq) {
     std::cout << "encoding seq with a ranked_bit_vector..." << std::endl;
     std::cout << "seq.size() = " << seq.size() << std::endl;
     std::cout << "seq.back() = " << seq.back() << std::endl;
-    ranked_bit_vector::builder rbv_builder(seq.back() + 1);
+    bit_vector::builder bv_builder(seq.back() + 1);
     for (auto x : seq) {
-        rbv_builder.set(x);          // set bit at position x
-        assert(rbv_builder.get(x));  // must be set
+        bv_builder.set(x);          // set bit at position x
+        assert(bv_builder.get(x));  // must be set
     }
-    ranked_bit_vector rbv;
-    rbv_builder.build(rbv);
-    rbv.build_index();
-    std::cout << "rbv.num_bits() = " << rbv.num_bits() << '\n';
-    std::cout << "rbv.num_ones() = " << rbv.num_ones() << '\n';
-    std::cout << "rbv.num_zeros() = " << rbv.num_zeros() << '\n';
-    std::cout << "density = " << ((seq.size() + 1) * 100.0) / rbv.num_bits() << "%\n";
-    std::cout << "measured bits/int = " << (8.0 * rbv.num_bytes()) / seq.size() << std::endl;
-    return rbv;
+    bit_vector bv;
+    bv_builder.build(bv);
+    rank9 rank_index;
+    rank_index.build(bv);
+    std::cout << "bv.num_bits() = " << bv.num_bits() << '\n';
+    std::cout << "rank_index.num_ones() = " << rank_index.num_ones() << '\n';
+    std::cout << "density = " << ((seq.size() + 1) * 100.0) / bv.num_bits() << "%\n";
+    std::cout << "bit_vector measured bits/int = " << (8.0 * bv.num_bytes()) / seq.size()
+              << std::endl;
+    std::cout << "rank_index measured bits/int = " << (8.0 * rank_index.num_bytes()) / seq.size()
+              << std::endl;
+    return {bv, rank_index};
 }
 
 void run_test(const uint64_t max_int) {
     constexpr bool all_distinct = true;
     std::vector<uint64_t> seq = test::get_sorted_sequence(num_positions, max_int, all_distinct);
-    auto rbv = encode_with_ranked_bit_vector(seq);
-    REQUIRE(rbv.num_ones() == seq.size());
-    REQUIRE(rbv.rank1(0) == 0);
+    auto [B, rank_index] = encode_with_ranked_bit_vector(seq);
+    REQUIRE(rank_index.num_ones() == seq.size());
+    REQUIRE(rank_index.rank1(B, 0) == 0);
     for (uint64_t i = 0; i != seq.size(); ++i) {
         uint64_t j = seq[i];
-        uint64_t num_ones = rbv.rank1(j);   // number of 1s in B[0..j)
-        uint64_t num_zeros = rbv.rank0(j);  // number of 0s in B[0..j)
+        uint64_t num_ones = rank_index.rank1(B, j);   // number of 1s in B[0..j)
+        uint64_t num_zeros = rank_index.rank0(B, j);  // number of 0s in B[0..j)
         REQUIRE(num_ones + num_zeros == j);
         // std::cout << "rank1(" << j << ") = " << num_ones << std::endl;
         // std::cout << "rank0(" << j << ") = " << num_zeros << std::endl;
