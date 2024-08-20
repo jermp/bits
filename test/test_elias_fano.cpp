@@ -6,7 +6,7 @@ constexpr uint64_t sequence_length = 10000;
 template <bool index_zeros, bool encode_prefix_sum>
 elias_fano<index_zeros, encode_prefix_sum> encode_with_elias_fano(
     std::vector<uint64_t> const& seq) {
-    std::cout << "encoding them with elias_fano<index_zeros=" << index_zeros
+    std::cout << "encoding seq with elias_fano<index_zeros=" << index_zeros
               << ", encode_prefix_sum=" << encode_prefix_sum << ">..." << std::endl;
     elias_fano<index_zeros, encode_prefix_sum> ef;
     ef.encode(seq.begin(), seq.size());
@@ -17,7 +17,7 @@ elias_fano<index_zeros, encode_prefix_sum> encode_with_elias_fano(
 }
 
 TEST_CASE("access") {
-    std::vector<uint64_t> seq = bits::test::get_sorted_sequence(sequence_length);
+    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
     constexpr bool index_zeros = true;
     constexpr bool encode_prefix_sum = false;
     auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
@@ -32,7 +32,7 @@ TEST_CASE("access") {
 }
 
 TEST_CASE("iterator") {
-    std::vector<uint64_t> seq = bits::test::get_sorted_sequence(sequence_length);
+    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
     constexpr bool index_zeros = true;
     constexpr bool encode_prefix_sum = false;
     auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
@@ -51,7 +51,7 @@ TEST_CASE("iterator") {
 }
 
 TEST_CASE("next_geq") {
-    std::vector<uint64_t> seq = bits::test::get_sorted_sequence(sequence_length);
+    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
     constexpr bool index_zeros = true;
     constexpr bool encode_prefix_sum = false;
     auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
@@ -177,7 +177,7 @@ TEST_CASE("small_prev_leq") {
 }
 
 TEST_CASE("prev_leq") {
-    std::vector<uint64_t> seq = bits::test::get_sorted_sequence(sequence_length);
+    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
     constexpr bool index_zeros = true;
     constexpr bool encode_prefix_sum = false;
     auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
@@ -227,7 +227,7 @@ TEST_CASE("prev_leq") {
 }
 
 TEST_CASE("diff") {
-    std::vector<uint64_t> seq = bits::test::get_sequence(sequence_length);
+    std::vector<uint64_t> seq = test::get_sequence(sequence_length);
     constexpr bool index_zeros = true;
     constexpr bool encode_prefix_sum = true;
     auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
@@ -248,7 +248,7 @@ TEST_CASE("diff") {
 }
 
 TEST_CASE("save_load") {
-    std::vector<uint64_t> seq = bits::test::get_sorted_sequence(sequence_length);
+    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
     constexpr bool index_zeros = true;
     constexpr bool encode_prefix_sum = false;
     using ef_type = elias_fano<index_zeros, encode_prefix_sum>;
@@ -276,7 +276,7 @@ TEST_CASE("save_load") {
 }
 
 TEST_CASE("build_from_compact_vector_iterator") {
-    std::vector<uint64_t> seq = bits::test::get_sorted_sequence(sequence_length);
+    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
     constexpr bool index_zeros = true;
     constexpr bool encode_prefix_sum = false;
     std::cout << "encoding them with elias_fano<index_zeros=" << index_zeros

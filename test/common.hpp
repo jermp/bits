@@ -51,7 +51,12 @@ std::vector<uint64_t> get_sorted_sequence(const uint64_t sequence_length,  //
     return seq;
 }
 
+uint64_t get_random_uint(const uint64_t max_int = 1000) {
+    uint64_t seed = essentials::get_random_seed();
+    srand(seed);
+    return rand() % max_int + 1;  // at least 1
+}
+
 }  // namespace bits::test
 
 using namespace bits;
-using namespace bits::test;

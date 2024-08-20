@@ -4,7 +4,7 @@
 constexpr uint64_t sequence_length = 10000;
 
 TEST_CASE("32bits") {
-    std::vector<uint64_t> seq = bits::test::get_sequence(sequence_length);
+    std::vector<uint64_t> seq = test::get_sequence(sequence_length);
     bit_vector::builder builder;
     constexpr uint64_t max_uint32 = uint64_t(1) << 32;
     for (auto x : seq) {
@@ -30,7 +30,7 @@ TEST_CASE("32bits") {
 
 TEST_CASE("unary") {
     std::vector<uint64_t> seq =
-        bits::test::get_sequence(sequence_length, 64 - 1  // each value must be < 64
+        test::get_sequence(sequence_length, 64 - 1  // each value must be < 64
         );
     bit_vector::builder builder;
     for (auto x : seq) util::write_unary(builder, x);
@@ -43,9 +43,9 @@ TEST_CASE("unary") {
 }
 
 TEST_CASE("binary") {
-    const uint64_t u = rand() % 1000 + 1;  // at least 1
+    const uint64_t u = test::get_random_uint();
     std::cout << "u = " << u << std::endl;
-    std::vector<uint64_t> seq = bits::test::get_sequence(sequence_length, u);
+    std::vector<uint64_t> seq = test::get_sequence(sequence_length, u);
     bit_vector::builder builder;
     for (auto x : seq) {
         assert(x <= u);
@@ -60,9 +60,9 @@ TEST_CASE("binary") {
 }
 
 TEST_CASE("gamma") {
-    const uint64_t u = rand() % 1000 + 1;  // at least 1
+    const uint64_t u = test::get_random_uint();
     std::cout << "u = " << u << std::endl;
-    std::vector<uint64_t> seq = bits::test::get_sequence(sequence_length, u);
+    std::vector<uint64_t> seq = test::get_sequence(sequence_length, u);
     bit_vector::builder builder;
     for (auto x : seq) util::write_gamma(builder, x);
     std::cout << "measured bits/int = " << (1.0 * builder.num_bits()) / seq.size() << std::endl;
@@ -74,9 +74,9 @@ TEST_CASE("gamma") {
 }
 
 TEST_CASE("delta") {
-    const uint64_t u = rand() % 1000 + 1;  // at least 1
+    const uint64_t u = test::get_random_uint();
     std::cout << "u = " << u << std::endl;
-    std::vector<uint64_t> seq = bits::test::get_sequence(sequence_length, u);
+    std::vector<uint64_t> seq = test::get_sequence(sequence_length, u);
     bit_vector::builder builder;
     for (auto x : seq) util::write_delta(builder, x);
     std::cout << "measured bits/int = " << (1.0 * builder.num_bits()) / seq.size() << std::endl;
@@ -88,9 +88,9 @@ TEST_CASE("delta") {
 }
 
 TEST_CASE("rice") {
-    const uint64_t u = rand() % 1000000 + 1;  // at least 1
+    const uint64_t u = test::get_random_uint(1000000);
     std::cout << "u = " << u << std::endl;
-    std::vector<uint64_t> seq = bits::test::get_sequence(sequence_length, u);
+    std::vector<uint64_t> seq = test::get_sequence(sequence_length, u);
     bit_vector::builder builder;
     for (uint64_t k = 1; k <= 32; ++k) {
         builder.clear();

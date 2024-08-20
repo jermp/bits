@@ -8,14 +8,15 @@
 
 namespace bits {
 
-struct compact_vector {
+struct compact_vector  //
+{
     template <typename Vec>
     struct enumerator {
         using iterator_category = std::random_access_iterator_tag;
 
         enumerator() {}
 
-        enumerator(Vec const* vec, uint64_t i = 0)
+        enumerator(Vec const* vec, uint64_t i)
             : m_i(i)
             , m_cur_val(0)
             , m_cur_block((i * vec->m_width) >> 6)
@@ -72,6 +73,12 @@ struct compact_vector {
 
         builder(uint64_t n, uint64_t w) { resize(n, w); }
 
+        /*
+            Resize the container to hold n values, each of width w.
+            After resize, either set() or push_back() can be called,
+            i.e., resize does not change the end of the container:
+            push_back will push elements starting at position 0.
+        */
         void resize(size_t n, uint64_t w) {
             m_size = n;
             m_width = w;
@@ -91,10 +98,13 @@ struct compact_vector {
 
         template <typename Iterator>
         void fill(Iterator begin, uint64_t n) {
-            if (m_width == 0) throw std::runtime_error("width must be greater than 0");
+            if (m_width == 0) throw std::runtime_error("width must be > 0");
             for (uint64_t i = 0; i != n; ++i, ++begin) push_back(*begin);
         }
 
+        /*
+            Sets value v at position i.
+        */
         void set(uint64_t i, uint64_t v) {
             assert(m_width != 0);
             assert(i < m_size);
@@ -114,6 +124,9 @@ struct compact_vector {
             }
         }
 
+        /*
+            Append value v at the end of the vector.
+        */
         void push_back(uint64_t v) {
             assert(m_width != 0);
             m_back = v;
@@ -136,12 +149,13 @@ struct compact_vector {
             }
         }
 
-        friend struct enumerator<builder>;
+        friend struct enumerator<builder>;  // to let enumerator access private members
 
         typedef enumerator<builder> iterator;
 
-        iterator begin() const { return iterator(this); }
-        iterator end() const { return iterator(this, size()); }
+        iterator at(uint64_t pos) const { return iterator(this, pos); }
+        iterator begin() const { return at(0); }
+        iterator end() const { return at(size()); }
 
         void build(compact_vector& cv) {
             cv.m_size = m_size;
@@ -163,8 +177,7 @@ struct compact_vector {
         uint64_t back() const { return m_back; }
         uint64_t size() const { return m_size; }
         uint64_t width() const { return m_width; }
-
-        std::vector<uint64_t>& bits() { return m_data; }
+        std::vector<uint64_t> const& data() const { return m_data; }
 
     private:
         uint64_t m_size;
@@ -192,7 +205,7 @@ struct compact_vector {
         builder.build(*this);
     }
 
-    inline uint64_t operator[](uint64_t i) const {
+    uint64_t operator[](uint64_t i) const {
         assert(i < size());
         uint64_t pos = i * m_width;
         uint64_t block = pos >> 6;
@@ -202,24 +215,23 @@ struct compact_vector {
                    : (m_data[block] >> shift) | (m_data[block + 1] << (64 - shift) & m_mask);
     }
 
-    // it retrieves at least 57 bits
-    inline uint64_t access(uint64_t pos) const {
-        assert(pos < size());
-        uint64_t i = pos * m_width;
+    uint64_t access(uint64_t i) const {
+        assert(i < size());
+        uint64_t pos = i * m_width;
         const char* ptr = reinterpret_cast<const char*>(m_data.data());
-        return (*(reinterpret_cast<uint64_t const*>(ptr + (i >> 3))) >> (i & 7)) & m_mask;
+        return (*(reinterpret_cast<uint64_t const*>(ptr + (pos >> 3))) >> (pos & 7)) & m_mask;
     }
 
     uint64_t back() const { return operator[](size() - 1); }
     uint64_t size() const { return m_size; }
     uint64_t width() const { return m_width; }
-    std::vector<uint64_t> const& bits() const { return m_data; }
+    std::vector<uint64_t> const& data() const { return m_data; }
 
     typedef enumerator<compact_vector> iterator;
 
-    iterator begin() const { return iterator(this); }
-    iterator end() const { return iterator(this, size()); }
     iterator at(uint64_t pos) const { return iterator(this, pos); }
+    iterator begin() const { return at(0); }
+    iterator end() const { return at(size()); }
 
     uint64_t num_bytes() const {
         return sizeof(m_size) + sizeof(m_width) + sizeof(m_mask) + essentials::vec_bytes(m_data);
