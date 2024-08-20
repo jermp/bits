@@ -1,34 +1,72 @@
 #pragma once
 
-#include <vector>
-
 #include "bit_vector.hpp"
-#include "essentials.hpp"
 
 namespace bits {
 
 struct ranked_bit_vector : public bit_vector {
     ranked_bit_vector() : bit_vector() {}
 
-    void build(bit_vector_builder* bvb) {
-        bit_vector::build(bvb);
-        build_index();
+    void build_index() {
+        std::vector<uint64_t> block_rank_pairs;
+        uint64_t next_rank = 0;
+        uint64_t cur_subrank = 0;
+        uint64_t subranks = 0;
+        block_rank_pairs.push_back(0);
+        for (uint64_t i = 0; i < m_data.size(); ++i) {
+            uint64_t word_pop = util::popcount(m_data[i]);
+            uint64_t shift = i % block_size;
+            if (shift) {
+                subranks <<= 9;
+                subranks |= cur_subrank;
+            }
+            next_rank += word_pop;
+            cur_subrank += word_pop;
+
+            if (shift == block_size - 1) {
+                block_rank_pairs.push_back(subranks);
+                block_rank_pairs.push_back(next_rank);
+                subranks = 0;
+                cur_subrank = 0;
+            }
+        }
+        uint64_t left = block_size - m_data.size() % block_size;
+        for (uint64_t i = 0; i < left; ++i) {
+            subranks <<= 9;
+            subranks |= cur_subrank;
+        }
+        block_rank_pairs.push_back(subranks);
+
+        if (m_data.size() % block_size) {
+            block_rank_pairs.push_back(next_rank);
+            block_rank_pairs.push_back(0);
+        }
+
+        m_block_rank_pairs.swap(block_rank_pairs);
     }
 
     inline uint64_t num_ones() const { return *(m_block_rank_pairs.end() - 2); }
-    inline uint64_t num_zeros() const { return size() - num_ones(); }
+    inline uint64_t num_zeros() const { return num_bits() - num_ones(); }
 
     /*
-        Return the number of ones in A[0..pos).
+        Return the number of ones in B[0..i).
     */
-    inline uint64_t rank(uint64_t pos) const {
-        assert(pos <= size());
-        if (pos == size()) return num_ones();
-        uint64_t sub_block = pos / 64;
+    inline uint64_t rank1(uint64_t i) const {
+        assert(i <= num_bits());
+        if (i == num_bits()) return num_ones();
+        uint64_t sub_block = i / 64;
         uint64_t r = sub_block_rank(sub_block);
-        uint64_t sub_left = pos % 64;
-        if (sub_left) r += util::popcount(m_bits[sub_block] << (64 - sub_left));
+        uint64_t sub_left = i % 64;
+        if (sub_left) r += util::popcount(m_data[sub_block] << (64 - sub_left));
         return r;
+    }
+
+    /*
+        Return the number of zeros in B[0..i).
+    */
+    inline uint64_t rank0(uint64_t i) const {
+        assert(i <= num_bits());
+        return i - rank1(i);
     }
 
     uint64_t num_bytes() const {
@@ -66,44 +104,6 @@ protected:
 
     inline uint64_t sub_block_ranks(uint64_t block) const {
         return m_block_rank_pairs[block * 2 + 1];
-    }
-
-    void build_index() {
-        std::vector<uint64_t> block_rank_pairs;
-        uint64_t next_rank = 0;
-        uint64_t cur_subrank = 0;
-        uint64_t subranks = 0;
-        block_rank_pairs.push_back(0);
-        for (uint64_t i = 0; i < m_bits.size(); ++i) {
-            uint64_t word_pop = util::popcount(m_bits[i]);
-            uint64_t shift = i % block_size;
-            if (shift) {
-                subranks <<= 9;
-                subranks |= cur_subrank;
-            }
-            next_rank += word_pop;
-            cur_subrank += word_pop;
-
-            if (shift == block_size - 1) {
-                block_rank_pairs.push_back(subranks);
-                block_rank_pairs.push_back(next_rank);
-                subranks = 0;
-                cur_subrank = 0;
-            }
-        }
-        uint64_t left = block_size - m_bits.size() % block_size;
-        for (uint64_t i = 0; i < left; ++i) {
-            subranks <<= 9;
-            subranks |= cur_subrank;
-        }
-        block_rank_pairs.push_back(subranks);
-
-        if (m_bits.size() % block_size) {
-            block_rank_pairs.push_back(next_rank);
-            block_rank_pairs.push_back(0);
-        }
-
-        m_block_rank_pairs.swap(block_rank_pairs);
     }
 
     static const uint64_t block_size = 8;  // in 64bit words
