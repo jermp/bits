@@ -77,6 +77,8 @@ TEST_CASE("iterator") {
                                                         << seq[i]);
         }
     }
+
+    std::cout << "EVERYTHING OK!" << std::endl;
 }
 
 TEST_CASE("save_load") {
@@ -97,6 +99,6 @@ TEST_CASE("save_load") {
         REQUIRE_MESSAGE(*it == seq[i], "got " << *it << " at position " << i << "/" << seq.size()
                                               << " but expected " << seq[i]);
     }
-    std::cout << "EVERYTHING OK!" << std::endl;
     std::remove(output_filename.c_str());
+    std::cout << "EVERYTHING OK!" << std::endl;
 }

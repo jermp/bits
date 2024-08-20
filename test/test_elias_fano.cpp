@@ -271,8 +271,8 @@ TEST_CASE("save_load") {
         ++i;
     }
     assert(i == sequence_length);
-    std::cout << "EVERYTHING OK!" << std::endl;
     std::remove(output_filename.c_str());
+    std::cout << "EVERYTHING OK!" << std::endl;
 }
 
 TEST_CASE("build_from_compact_vector_iterator") {

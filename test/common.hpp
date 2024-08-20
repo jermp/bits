@@ -31,8 +31,9 @@ std::vector<uint64_t> get_sequence(const uint64_t sequence_length,  //
     Generate a sorted sequence of [sequence_length] random integers,
     distributed as a poisson RV with a random mean.
 */
-std::vector<uint64_t> get_sorted_sequence(const uint64_t sequence_length,  //
-                                          const uint64_t max_int = 1000)   //
+std::vector<uint64_t> get_sorted_sequence(const uint64_t sequence_length,   //
+                                          const uint64_t max_int = 1000,    //
+                                          const bool all_distinct = false)  //
 {
     uint64_t seed = essentials::get_random_seed();
     srand(seed);
@@ -43,7 +44,7 @@ std::vector<uint64_t> get_sorted_sequence(const uint64_t sequence_length,  //
     std::vector<uint64_t> seq(sequence_length);
     std::generate(seq.begin(), seq.end(), [&]() {
         uint64_t val = distr(rng) % (max_int + 1);
-        universe += val;
+        universe += val + all_distinct;
         return universe;
     });
     assert(seq.back() == universe);

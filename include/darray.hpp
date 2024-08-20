@@ -4,7 +4,6 @@
 #include "bit_vector.hpp"
 
 namespace bits {
-namespace detail {
 
 template <typename WordGetter>
 struct darray {
@@ -48,18 +47,22 @@ struct darray {
         m_overflow_positions.swap(overflow_positions);
     }
 
-    inline uint64_t select(bit_vector const& bv, uint64_t idx) const {
-        assert(idx < num_positions());
-        uint64_t block = idx / block_size;
+    /*
+        Return the position of the i-th bit set,
+        for any 0 <= i < num_positions();
+    */
+    inline uint64_t select(bit_vector const& bv, uint64_t i) const {
+        assert(i < num_positions());
+        uint64_t block = i / block_size;
         int64_t block_pos = m_block_inventory[block];
         if (block_pos < 0) {  // sparse super-block
             uint64_t overflow_pos = uint64_t(-block_pos - 1);
-            return m_overflow_positions[overflow_pos + (idx & (block_size - 1))];
+            return m_overflow_positions[overflow_pos + (i & (block_size - 1))];
         }
 
-        uint64_t subblock = idx / subblock_size;
+        uint64_t subblock = i / subblock_size;
         uint64_t start_pos = uint64_t(block_pos) + m_subblock_inventory[subblock];
-        uint64_t reminder = idx & (subblock_size - 1);
+        uint64_t reminder = i & (subblock_size - 1);
         if (!reminder) return start_pos;
 
         std::vector<uint64_t> const& data = bv.data();
@@ -134,6 +137,8 @@ protected:
     }
 };
 
+namespace util {
+
 struct identity_getter {
     uint64_t operator()(std::vector<uint64_t> const& data, uint64_t i) const { return data[i]; }
 };
@@ -142,9 +147,9 @@ struct negating_getter {
     uint64_t operator()(std::vector<uint64_t> const& data, uint64_t i) const { return ~data[i]; }
 };
 
-}  // namespace detail
+}  // namespace util
 
-typedef detail::darray<detail::identity_getter> darray1;
-typedef detail::darray<detail::negating_getter> darray0;
+typedef darray<util::identity_getter> darray1;  // take positions of 1s
+typedef darray<util::negating_getter> darray0;  // take positions of 0s
 
 }  // namespace bits
