@@ -9,8 +9,8 @@ template <typename WordGetter>
 struct darray {
     darray() : m_positions(0) {}
 
-    void build(bit_vector const& bv) {
-        std::vector<uint64_t> const& data = bv.data();
+    void build(bit_vector const& B) {
+        std::vector<uint64_t> const& data = B.data();
         std::vector<uint64_t> cur_block_positions;
         std::vector<int64_t> block_inventory;
         std::vector<uint16_t> subblock_inventory;
@@ -23,7 +23,7 @@ struct darray {
             while (util::lsbll(cur_word, l)) {
                 cur_pos += l;
                 cur_word >>= l;
-                if (cur_pos >= bv.num_bits()) break;
+                if (cur_pos >= B.num_bits()) break;
 
                 cur_block_positions.push_back(cur_pos);
 
@@ -48,10 +48,10 @@ struct darray {
     }
 
     /*
-        Return the position of the i-th bit set,
+        Return the position of the i-th bit set in B,
         for any 0 <= i < num_positions();
     */
-    inline uint64_t select(bit_vector const& bv, uint64_t i) const {
+    inline uint64_t select(bit_vector const& B, uint64_t i) const {
         assert(i < num_positions());
         uint64_t block = i / block_size;
         int64_t block_pos = m_block_inventory[block];
@@ -65,7 +65,7 @@ struct darray {
         uint64_t reminder = i & (subblock_size - 1);
         if (!reminder) return start_pos;
 
-        std::vector<uint64_t> const& data = bv.data();
+        std::vector<uint64_t> const& data = B.data();
         uint64_t word_idx = start_pos >> 6;
         uint64_t word_shift = start_pos & 63;
         uint64_t word = WordGetter()(data, word_idx) & (uint64_t(-1) << word_shift);
