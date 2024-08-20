@@ -11,16 +11,19 @@ A C++ collection of basic data structures, including:
 
 ### Inclusion in other projects
 
+TODO
+
 ### Tests
 
-Tests are written using [doctest](https://github.com/doctest/doctest). To run the tests, first compile the tests:
+Tests are written using [doctest](https://github.com/doctest/doctest). To run the tests, first compile the tests, with
 
 	mkdir build
 	cd build
 	cmake .. -DCMAKE_BUILD_TYPE=Debug
 	make
-	make test
 	
-To run a specific test, use the tool `-tc` of doctest and specify the test case name. For example:
+and then run `make test`.
+	
+To run a specific test, use the tool `-tc` of doctest to specify the test case name. For example:
 
 	./test_elias_fano -tc=access
