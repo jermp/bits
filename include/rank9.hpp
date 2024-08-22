@@ -54,7 +54,7 @@ struct rank9 {
     inline uint64_t rank1(bit_vector const& B, uint64_t i) const {
         assert(i <= B.num_bits());
         if (i == B.num_bits()) return num_ones();
-        uint64_t sub_block = i / 64;
+        uint64_t sub_block = i >> 6;
         uint64_t r = sub_block_rank(sub_block);
         uint64_t sub_left = i % 64;
         if (sub_left) {

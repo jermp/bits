@@ -47,7 +47,7 @@ struct bit_vector {
         }
 
         inline void push_back(bool b) {
-            uint64_t pos_in_word = m_num_bits % 64;
+            uint64_t pos_in_word = m_num_bits & 63;
             if (pos_in_word == 0) {
                 m_data.push_back(0);
                 m_cur_word = &m_data.back();
@@ -118,7 +118,7 @@ struct bit_vector {
             if (!rhs.num_bits()) return;
 
             uint64_t pos = m_data.size();
-            uint64_t shift = num_bits() % 64;
+            uint64_t shift = num_bits() & 63;
             m_num_bits = num_bits() + rhs.num_bits();
             m_data.resize(essentials::words_for<uint64_t>(m_num_bits));
 
@@ -224,7 +224,7 @@ struct bit_vector {
             while (skipped + (w = util::popcount(buf)) <= k) {
                 skipped += w;
                 m_position += 64;
-                buf = m_data[m_position / 64];
+                buf = m_data[m_position >> 6];
             }
             assert(buf);
             uint64_t pos_in_word = util::select_in_word(buf, k - skipped);
@@ -235,13 +235,13 @@ struct bit_vector {
         // skip to the k-th zero after the current position
         void skip0(uint64_t k) {
             uint64_t skipped = 0;
-            uint64_t pos_in_word = m_position % 64;
+            uint64_t pos_in_word = m_position & 63;
             uint64_t buf = ~m_buf & (uint64_t(-1) << pos_in_word);
             uint64_t w = 0;
             while (skipped + (w = util::popcount(buf)) <= k) {
                 skipped += w;
                 m_position += 64;
-                buf = ~m_data[m_position / 64];
+                buf = ~m_data[m_position >> 6];
             }
             assert(buf);
             pos_in_word = util::select_in_word(buf, k - skipped);
@@ -297,7 +297,7 @@ struct bit_vector_iterator {
 
     void at_and_clear_low_bits(uint64_t pos) {
         m_pos = pos;
-        m_buf = m_data[pos / 64];
+        m_buf = m_data[pos >> 6];
         m_buf &= uint64_t(-1) << (m_pos & 63);  // clear low bits
     }
 
@@ -359,8 +359,8 @@ struct bit_vector_iterator {
 
 private:
     uint64_t get_next_word64() {
-        uint64_t block = m_pos / 64;
-        uint64_t shift = m_pos % 64;
+        uint64_t block = m_pos >> 6;
+        uint64_t shift = m_pos & 63;
         uint64_t word = m_data[block] >> shift;
         if (shift && block + 1 < m_num_64bit_words) { word |= m_data[block + 1] << (64 - shift); }
         return word;
