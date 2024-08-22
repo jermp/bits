@@ -43,15 +43,48 @@ TEST_CASE("access") {
     std::cout << "EVERYTHING OK!" << std::endl;
 }
 
-TEST_CASE("iterator") {
+TEST_CASE("iterator::operator++") {
     const uint64_t max_int = test::get_random_uint();
     std::cout << "max_int = " << max_int << std::endl;
     std::vector<uint64_t> seq = test::get_sequence(sequence_length, max_int);
     auto cv = encode_with_compact_vector(seq);
     auto cv_it = cv.begin();
     for (uint64_t i = 0; i != seq.size(); ++i, ++cv_it) {
-        REQUIRE_MESSAGE(*cv_it == seq[i], "got " << *cv_it << " at position " << i << "/"
-                                                 << seq.size() << " but expected " << seq[i]);
+        uint64_t got = *cv_it;
+        uint64_t expected = seq[i];
+        REQUIRE_MESSAGE(got == seq[i], "got " << got << " at position " << i << "/" << seq.size()
+                                              << " but expected " << expected);
+    }
+    std::cout << "EVERYTHING OK!" << std::endl;
+}
+
+TEST_CASE("iterator::operator+") {
+    const uint64_t max_int = test::get_random_uint();
+    std::cout << "max_int = " << max_int << std::endl;
+    std::vector<uint64_t> seq = test::get_sequence(sequence_length, max_int);
+    auto cv = encode_with_compact_vector(seq);
+    auto cv_it = cv.begin();
+    for (uint64_t i = 0; i != seq.size(); ++i) {
+        uint64_t got = *(cv_it + i);
+        uint64_t expected = seq[i];
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/" << seq.size()
+                                                << " but expected " << expected);
+    }
+    std::cout << "EVERYTHING OK!" << std::endl;
+}
+
+TEST_CASE("iterator::operator-") {
+    const uint64_t max_int = test::get_random_uint();
+    std::cout << "max_int = " << max_int << std::endl;
+    std::vector<uint64_t> seq = test::get_sequence(sequence_length, max_int);
+    auto cv = encode_with_compact_vector(seq);
+    auto cv_it = cv.end();
+    for (uint64_t i = 0; i != seq.size(); ++i) {
+        uint64_t got = *((cv_it - i) - 1);
+        uint64_t expected = seq[seq.size() - i - 1];
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << seq.size() - i - 1
+                                                << "/" << seq.size() << " but expected "
+                                                << expected);
     }
     std::cout << "EVERYTHING OK!" << std::endl;
 }

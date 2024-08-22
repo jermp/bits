@@ -34,7 +34,13 @@ struct compact_vector  //
         }
 
         enumerator operator+(uint64_t jump) {
-            enumerator copy(this->m_vec, m_i + jump);
+            enumerator copy(m_vec, m_i + jump);
+            return copy;
+        }
+
+        enumerator operator-(uint64_t jump) {
+            assert(m_i >= jump);
+            enumerator copy(m_vec, m_i - jump);
             return copy;
         }
 
