@@ -58,7 +58,7 @@ struct elias_fano {
 
         // add a zero at the beginning
         if constexpr (encode_prefix_sum) {
-            if (l) cvb_low_bits.push_back(0);
+            if (l) cvb_low_bits.set(0, 0);
             bvb_high_bits.set(0, 1);
             n = n - 1;  // restore n
         }
@@ -73,7 +73,7 @@ struct elias_fano {
                 std::cerr << "current " << v << "\n";
                 throw std::runtime_error("sequence is not sorted");
             }
-            if (l) cvb_low_bits.push_back(v & low_mask);
+            if (l) cvb_low_bits.set(i + encode_prefix_sum, v & low_mask);
             bvb_high_bits.set((v >> l) + i + encode_prefix_sum, 1);
             last = v;
         }

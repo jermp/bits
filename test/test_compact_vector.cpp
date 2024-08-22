@@ -6,7 +6,7 @@ constexpr uint64_t sequence_length = 10000;
 compact_vector encode_with_compact_vector(std::vector<uint64_t> const& seq) {
     std::cout << "encoding seq with a compact_vector..." << std::endl;
     compact_vector cv;
-    cv.build(seq.begin(), seq.size());  // this calls compact_vector::builder::push_back
+    cv.build(seq.begin(), seq.size());  // this calls compact_vector::builder::set
     std::cout << "cv.size() = " << cv.size() << '\n';
     std::cout << "cv.width() = " << cv.width() << '\n';
     std::cout << "measured bits/int = " << (8.0 * cv.num_bytes()) / cv.size() << std::endl;
@@ -48,36 +48,11 @@ TEST_CASE("iterator") {
     std::cout << "max_int = " << max_int << std::endl;
     std::vector<uint64_t> seq = test::get_sequence(sequence_length, max_int);
     auto cv = encode_with_compact_vector(seq);
-
-    compact_vector::builder cv_builder(cv.size(), cv.width());
-    for (uint64_t i = 0; i != seq.size(); ++i) cv_builder.set(i, seq[i]);
-
-    {
-        auto cv_it = cv.begin();
-        auto cv_builder_it = cv.begin();
-        for (uint64_t i = 0; i != seq.size(); ++i, ++cv_it, ++cv_builder_it) {
-            REQUIRE_MESSAGE(*cv_it == seq[i], "got " << *cv_it << " at position " << i << "/"
-                                                     << seq.size() << " but expected " << seq[i]);
-            REQUIRE_MESSAGE(*cv_builder_it == seq[i], "got " << *cv_builder_it << " at position "
-                                                             << i << "/" << seq.size()
-                                                             << " but expected " << seq[i]);
-        }
+    auto cv_it = cv.begin();
+    for (uint64_t i = 0; i != seq.size(); ++i, ++cv_it) {
+        REQUIRE_MESSAGE(*cv_it == seq[i], "got " << *cv_it << " at position " << i << "/"
+                                                 << seq.size() << " but expected " << seq[i]);
     }
-
-    compact_vector other;
-    cv_builder.build(other);
-    {
-        auto cv_it = cv.begin();
-        auto other_it = other.begin();
-        for (uint64_t i = 0; i != seq.size(); ++i, ++cv_it, ++other_it) {
-            REQUIRE_MESSAGE(*cv_it == seq[i], "got " << *cv_it << " at position " << i << "/"
-                                                     << seq.size() << " but expected " << seq[i]);
-            REQUIRE_MESSAGE(*other_it == seq[i], "got " << *other_it << " at position " << i << "/"
-                                                        << seq.size() << " but expected "
-                                                        << seq[i]);
-        }
-    }
-
     std::cout << "EVERYTHING OK!" << std::endl;
 }
 
