@@ -11,15 +11,9 @@ TEST_CASE("32bits") {
         if (x < max_uint32) util::write_32bits(builder, x);
     }
     std::cout << "measured bits/int = " << (1.0 * builder.num_bits()) / seq.size() << std::endl;
-
-    // directly read the bits of the bit_vector::builder without building a bit_vector
-    bit_vector_iterator bv_it(builder.data().data(), builder.data().size());
-
-    // or first build a bit_vector...
-    // bit_vector bv;
-    // builder.build(bv);
-    // bit_vector_iterator bv_it(bv.data().data(), bv.data().size());
-
+    bit_vector bv;
+    builder.build(bv);
+    bit_vector::iterator bv_it = bv.begin();
     for (auto x : seq) {
         if (x < max_uint32) {
             uint64_t got = util::read_32bits(bv_it);
@@ -35,10 +29,21 @@ TEST_CASE("unary") {
     bit_vector::builder builder;
     for (auto x : seq) util::write_unary(builder, x);
     std::cout << "measured bits/int = " << (1.0 * builder.num_bits()) / seq.size() << std::endl;
-    bit_vector_iterator bv_it(builder.data().data(), builder.data().size());
-    for (auto x : seq) {
+    bit_vector bv;
+    builder.build(bv);
+    bit_vector::iterator bv_it = bv.begin();
+    bit_vector::iterator bv_it_ones = bv_it;
+    uint64_t current_pos = bv_it_ones.position();
+    REQUIRE(current_pos == 0);
+    for (uint64_t i = 0; i != seq.size(); ++i) {
         uint64_t got = util::read_unary(bv_it);
-        REQUIRE_MESSAGE(got == x, "got " << got << " but expected " << x);
+        uint64_t pos = bv_it_ones.next();
+        uint64_t copy = pos - current_pos;
+        current_pos = pos + 1;
+        REQUIRE_MESSAGE(got == seq[i],
+                        "got " << got << " but expected " << seq[i] << " at position " << i);
+        REQUIRE_MESSAGE(copy == seq[i],
+                        "got " << copy << " but expected " << seq[i] << " at position " << i);
     }
 }
 
@@ -52,7 +57,9 @@ TEST_CASE("binary") {
         util::write_binary(builder, x, u);
     }
     std::cout << "measured bits/int = " << (1.0 * builder.num_bits()) / seq.size() << std::endl;
-    bit_vector_iterator bv_it(builder.data().data(), builder.data().size());
+    bit_vector bv;
+    builder.build(bv);
+    bit_vector::iterator bv_it = bv.begin();
     for (auto x : seq) {
         uint64_t got = util::read_binary(bv_it, u);
         REQUIRE_MESSAGE(got == x, "got " << got << " but expected " << x);
@@ -66,7 +73,9 @@ TEST_CASE("gamma") {
     bit_vector::builder builder;
     for (auto x : seq) util::write_gamma(builder, x);
     std::cout << "measured bits/int = " << (1.0 * builder.num_bits()) / seq.size() << std::endl;
-    bit_vector_iterator bv_it(builder.data().data(), builder.data().size());
+    bit_vector bv;
+    builder.build(bv);
+    bit_vector::iterator bv_it = bv.begin();
     for (auto x : seq) {
         uint64_t got = util::read_gamma(bv_it);
         REQUIRE_MESSAGE(got == x, "got " << got << " but expected " << x);
@@ -80,7 +89,9 @@ TEST_CASE("delta") {
     bit_vector::builder builder;
     for (auto x : seq) util::write_delta(builder, x);
     std::cout << "measured bits/int = " << (1.0 * builder.num_bits()) / seq.size() << std::endl;
-    bit_vector_iterator bv_it(builder.data().data(), builder.data().size());
+    bit_vector bv;
+    builder.build(bv);
+    bit_vector::iterator bv_it = bv.begin();
     for (auto x : seq) {
         uint64_t got = util::read_delta(bv_it);
         REQUIRE_MESSAGE(got == x, "got " << got << " but expected " << x);
@@ -96,7 +107,9 @@ TEST_CASE("rice") {
         builder.clear();
         for (auto x : seq) util::write_rice(builder, x, k);
         std::cout << "measured bits/int = " << (1.0 * builder.num_bits()) / seq.size() << std::endl;
-        bit_vector_iterator bv_it(builder.data().data(), builder.data().size());
+        bit_vector bv;
+        builder.build(bv);
+        bit_vector::iterator bv_it = bv.begin();
         for (auto x : seq) {
             uint64_t got = util::read_rice(bv_it, k);
             REQUIRE_MESSAGE(got == x, "got " << got << " but expected " << x);

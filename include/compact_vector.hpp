@@ -128,10 +128,9 @@ struct compact_vector  //
         friend struct enumerator<builder>;  // to let enumerator access private members
 
         typedef enumerator<builder> iterator;
-
-        iterator at(uint64_t pos) const { return iterator(this, pos); }
-        iterator begin() const { return at(0); }
-        iterator end() const { return at(size()); }
+        iterator get_iterator_at(uint64_t pos) const { return iterator(this, pos); }
+        iterator begin() const { return get_iterator_at(0); }
+        iterator end() const { return get_iterator_at(size()); }
 
         void build(compact_vector& cv) {
             cv.m_size = m_size;
@@ -202,10 +201,9 @@ struct compact_vector  //
     std::vector<uint64_t> const& data() const { return m_data; }
 
     typedef enumerator<compact_vector> iterator;
-
-    iterator at(uint64_t pos) const { return iterator(this, pos); }
-    iterator begin() const { return at(0); }
-    iterator end() const { return at(size()); }
+    iterator get_iterator_at(uint64_t pos) const { return iterator(this, pos); }
+    iterator begin() const { return get_iterator_at(0); }
+    iterator end() const { return get_iterator_at(size()); }
 
     uint64_t num_bytes() const {
         return sizeof(m_size) + sizeof(m_width) + sizeof(m_mask) + essentials::vec_bytes(m_data);

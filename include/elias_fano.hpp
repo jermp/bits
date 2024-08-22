@@ -93,8 +93,8 @@ struct elias_fano {
             assert(m_l < 64);
             if (m_ef->m_high_bits_d1.num_positions() == 0) return;
             uint64_t begin = m_ef->m_high_bits_d1.select(m_ef->m_high_bits, m_pos);
-            m_high_enum = bit_vector::unary_iterator(m_ef->m_high_bits, begin);
-            m_low_enum = m_ef->m_low_bits.at(m_pos);
+            m_high_bits_it = m_ef->m_high_bits.get_iterator_at(begin);
+            m_low_bits_it = m_ef->m_low_bits.get_iterator_at(m_pos);
         }
 
         bool good() const { return m_ef != nullptr; }
@@ -102,12 +102,12 @@ struct elias_fano {
 
         uint64_t next() {
             assert(good() and has_next());
-            uint64_t high = m_high_enum.next();
+            uint64_t high = m_high_bits_it.next();
             assert(high == m_ef->m_high_bits_d1.select(m_ef->m_high_bits, m_pos));
-            uint64_t low = *m_low_enum;
+            uint64_t low = *m_low_bits_it;
             uint64_t val = (((high - m_pos) << m_l) | low);
             ++m_pos;
-            ++m_low_enum;
+            ++m_low_bits_it;
             return val;
         }
 
@@ -115,8 +115,8 @@ struct elias_fano {
         elias_fano const* m_ef;
         uint64_t m_pos;
         uint64_t m_l;
-        bit_vector::unary_iterator m_high_enum;
-        compact_vector::iterator m_low_enum;
+        bit_vector::iterator m_high_bits_it;
+        compact_vector::iterator m_low_bits_it;
     };
 
     iterator at(uint64_t pos) const {
@@ -152,7 +152,7 @@ struct elias_fano {
         uint64_t l = m_low_bits.width();
         uint64_t pos = m_high_bits_d1.select(m_high_bits, i);
         uint64_t h1 = pos - i;
-        uint64_t h2 = bit_vector::unary_iterator(m_high_bits, pos + 1).next() - i - 1;
+        uint64_t h2 = m_high_bits.get_iterator_at(pos + 1).next() - i - 1;
         uint64_t val1 = (h1 << l) | low1;
         uint64_t val2 = (h2 << l) | low2;
         return val2 - val1;
@@ -186,12 +186,12 @@ struct elias_fano {
         1, 3, 3, 4, 5, 6, 6, 9, 12, 14, 17, 17
         0  1  2  3  4  5  6  7   8   9  10  11
 
-        prev_leq(0) = -1 (undefined)
+        prev_leq(0) = -1 (undefined, because 0 < front() = 1)
         prev_leq(3) = 2
         prev_leq(6) = 6
         prev_leq(7) = 6
         prev_leq(17) = 11
-        prev_leq(23) = 11 (saturate)
+        prev_leq(23) = 11 (saturate, because 23 >= back() = 17)
     */
     inline uint64_t prev_leq(uint64_t x) const {
         auto [pos, val] = next_geq_rightmost(x);
