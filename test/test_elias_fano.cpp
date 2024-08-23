@@ -150,10 +150,9 @@ TEST_CASE("next_geq") {
     for (auto x : seq) {
         /* since x is in the sequence, next_geq must return (i,x) */
 
-        // auto [pos, got] = ef.next_geq(x); // can't use structural binding with doctest...
-        std::pair<uint64_t, uint64_t> p = ef.next_geq(x);
-        uint64_t pos = p.first;
-        uint64_t got = p.second;
+        auto p = ef.next_geq(x);
+        uint64_t pos = p.pos;
+        uint64_t got = p.val;
         uint64_t expected = seq[i];
 
         // std::cout << "x=" << x << "; pos=" << pos << "; got=" << got << std::endl;
@@ -176,9 +175,9 @@ TEST_CASE("next_geq") {
         uint64_t x = seq[rand() % sequence_length] + (i % 2 == 0 ? 3 : -3);  // get some value
 
         // auto [pos, got] = ef.next_geq(x); // can't use structural binding with doctest...
-        std::pair<uint64_t, uint64_t> p = ef.next_geq(x);
-        uint64_t pos = p.first;
-        uint64_t got = p.second;
+        auto p = ef.next_geq(x);
+        uint64_t pos = p.pos;
+        uint64_t got = p.val;
 
         // std::cout << "x=" << x << "; pos=" << pos << "; got=" << got << std::endl;
         auto it = std::lower_bound(seq.begin(), seq.end(), x);
@@ -206,36 +205,34 @@ TEST_CASE("small_next_geq") {
     constexpr bool index_zeros = true;
     constexpr bool encode_prefix_sum = false;
     auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
-    std::pair<uint64_t, uint64_t> p;
-    uint64_t pos, got;
 
-    p = ef.next_geq(1);
-    pos = p.first;
-    got = p.second;
+    auto p = ef.next_geq(1);
+    uint64_t pos = p.pos;
+    uint64_t got = p.val;
     REQUIRE(pos == 0);  // leftmost
     REQUIRE(got == 1);
 
     p = ef.next_geq(3);
-    pos = p.first;
-    got = p.second;
+    pos = p.pos;
+    got = p.val;
     REQUIRE(pos == 3);  // leftmost
     REQUIRE(got == 3);
 
     p = ef.next_geq(6);
-    pos = p.first;
-    got = p.second;
+    pos = p.pos;
+    got = p.val;
     REQUIRE(pos == 6);  // leftmost
     REQUIRE(got == 6);
 
     p = ef.next_geq(23);
-    pos = p.first;
-    got = p.second;
+    pos = p.pos;
+    got = p.val;
     REQUIRE(pos == 11);  // leftmost
     REQUIRE(got == 23);
 
     p = ef.next_geq(100);  // saturate
-    pos = p.first;
-    got = p.second;
+    pos = p.pos;
+    got = p.val;
     REQUIRE(pos == seq.size() - 1);
     REQUIRE(got == seq.back());
 }
@@ -245,25 +242,42 @@ TEST_CASE("small_prev_leq") {
     constexpr bool index_zeros = true;
     constexpr bool encode_prefix_sum = false;
     auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
-    uint64_t pos;
 
-    pos = ef.prev_leq(0);
+    auto p = ef.prev_leq(0);
+    uint64_t pos = p.pos;
+    uint64_t got = p.val;
     REQUIRE(pos == uint64_t(-1));  // undefined since 0 < 1
+    REQUIRE(got == uint64_t(-1));
 
-    pos = ef.prev_leq(1);
+    p = ef.prev_leq(1);
+    pos = p.pos;
+    got = p.val;
     REQUIRE(pos == 2);  // rightmost
+    REQUIRE(got == 1);
 
-    pos = ef.prev_leq(3);
+    p = ef.prev_leq(3);
+    pos = p.pos;
+    got = p.val;
     REQUIRE(pos == 4);  // rightmost
+    REQUIRE(got == 3);
 
-    pos = ef.prev_leq(6);
+    p = ef.prev_leq(6);
+    pos = p.pos;
+    got = p.val;
     REQUIRE(pos == 8);  // rightmost
+    REQUIRE(got == 6);
 
-    pos = ef.prev_leq(23);
+    p = ef.prev_leq(23);
+    pos = p.pos;
+    got = p.val;
     REQUIRE(pos == seq.size() - 1);  // rightmost
+    REQUIRE(got == 23);
 
-    pos = ef.prev_leq(100);  // saturate
+    p = ef.prev_leq(100);  // saturate
+    pos = p.pos;
+    got = p.val;
     REQUIRE(pos == seq.size() - 1);
+    REQUIRE(got == 23);
 }
 
 TEST_CASE("prev_leq") {
@@ -275,8 +289,9 @@ TEST_CASE("prev_leq") {
     uint64_t i = 0;
     for (auto x : seq) {
         /* since x is in the sequence, prev_leq must return i */
-        auto pos = ef.prev_leq(x);
-        auto got = ef.access(pos);
+        auto p = ef.prev_leq(x);
+        uint64_t pos = p.pos;
+        uint64_t got = p.val;
         uint64_t expected = seq[i];
 
         // std::cout << "x=" << x << "; pos=" << pos << "; got=" << got << std::endl;
@@ -297,13 +312,15 @@ TEST_CASE("prev_leq") {
     const uint64_t front = ef.access(0);
     for (i = 0; i != 10000; ++i) {
         uint64_t x = seq[rand() % sequence_length] + (i % 2 == 0 ? 3 : -3);  // get some value
-        auto pos = ef.prev_leq(x);
+        auto p = ef.prev_leq(x);
+        uint64_t pos = p.pos;
+        uint64_t got = p.val;
         if (x < front) {
             REQUIRE_MESSAGE(pos == uint64_t(-1),
                             "expected pos " << uint64_t(-1) << " but got pos = " << pos);
             continue;
         }
-        auto got = pos < ef.size() ? ef.access(pos) : ef.back();
+        // auto got = pos < ef.size() ? ef.access(pos) : ef.back();
         // std::cout << "x=" << x << "; pos=" << pos << "; got=" << got << std::endl;
         auto it = std::upper_bound(seq.begin(), seq.end(), x) - 1;
         uint64_t expected = *it;

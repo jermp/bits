@@ -181,6 +181,11 @@ struct elias_fano {
         return val2 - val1;
     }
 
+    struct return_value {
+        uint64_t pos;
+        uint64_t val;
+    };
+
     /*
         Return [position,value] of the leftmost smallest element that is >= x.
         Return [size()-1,back()] if x > back().
@@ -197,28 +202,29 @@ struct elias_fano {
         next_geq(17) = [10,17]
         next_geq(23) = [11,17] (saturate)
     */
-    std::pair<uint64_t, uint64_t> next_geq(uint64_t x) const { return next_geq_leftmost(x); }
+    return_value next_geq(uint64_t x) const { return next_geq_leftmost(x).first; }
 
     /*
-        Return the position of the rightmost largest element that is <= x.
-        Return size()-1 if x >= back().
-        Return -1 if x < front() (result is undefined).
+        Return [position,value] of the rightmost largest element that is <= x.
+        Return [size()-1,back()] if x >= back().
+        Return [-1,-1] if x < front() (result is undefined).
 
         Example.
 
         1, 3, 3, 4, 5, 6, 6, 9, 12, 14, 17, 17
         0  1  2  3  4  5  6  7   8   9  10  11
 
-        prev_leq(0) = -1 (undefined, because 0 < front() = 1)
-        prev_leq(3) = 2
-        prev_leq(6) = 6
-        prev_leq(7) = 6
-        prev_leq(17) = 11
-        prev_leq(23) = 11 (saturate, because 23 >= back() = 17)
+        prev_leq(0) = [-1,-1] (undefined, because 0 < front() = 1)
+        prev_leq(3) = [2,3]
+        prev_leq(6) = [6,6]
+        prev_leq(7) = [6,6]
+        prev_leq(17) = [11,17]
+        prev_leq(23) = [11,17] (saturate, because 23 >= back() = 17)
     */
-    uint64_t prev_leq(uint64_t x) const {
-        auto [pos, val] = next_geq_rightmost(x);
-        return pos - (val > x);
+    return_value prev_leq(uint64_t x) const {
+        auto [ret, it] = next_geq_rightmost(x);
+        if (ret.val > x) return {ret.pos - 1, ret.pos != 0 ? it.prev_value() : uint64_t(-1)};
+        return ret;
     }
 
     uint64_t back() const { return m_universe; }
@@ -259,11 +265,11 @@ private:
         Return [position,value] of the leftmost smallest element that is >= x.
         Return [size()-1,back()] if x > back().
     */
-    std::pair<uint64_t, uint64_t> next_geq_leftmost(uint64_t x) const {
+    std::pair<return_value, iterator> next_geq_leftmost(uint64_t x) const {
         static_assert(index_zeros == true, "must build index on zeros");
         assert(m_high_bits_d0.num_positions());
 
-        if (x > back()) return {size() - 1, back()};
+        if (x > back()) return {{size() - 1, back()}, iterator()};
 
         uint64_t h_x = x >> m_low_bits.width();
         uint64_t begin = h_x ? m_high_bits_d0.select(m_high_bits, h_x - 1) - h_x + 1 : 0;
@@ -291,28 +297,30 @@ private:
         assert(val >= x);
         assert(pos < size());
         assert(val == access(pos));
-        return {pos, val};
+        assert(it.position() == pos);
+        return {{pos, val}, it};
     }
 
     /*
         Return [position,value] of the rightmost smallest element that is >= x.
         Return [size()-1,back()] if x >= back().
     */
-    std::pair<uint64_t, uint64_t> next_geq_rightmost(uint64_t x) const {
-        auto [pos, val] = next_geq_leftmost(x);
-        if (val == x and pos != size() - 1) {
-            auto it = get_iterator_at(pos);
-            val = it.value();
-            while (val == x) {  // keep scanning to pick the rightmost one
-                ++pos;
-                if (pos == size()) break;
+    std::pair<return_value, iterator> next_geq_rightmost(uint64_t x) const {
+        auto [ret, it] = next_geq_leftmost(x);
+        if (ret.val == x and ret.pos != size() - 1) {
+            assert(it.position() == ret.pos);
+            do {  // scan to pick the rightmost one
+                ++ret.pos;
+                if (ret.pos == size()) break;
                 it.next();
-                val = it.value();
-            }
-            assert(val >= x);
-            return {pos - 1, x};
+                ret.val = it.value();
+            } while (ret.val == x);
+            assert(ret.val >= x);
+            assert(ret.pos > 0);
+            ret.pos -= 1;
+            ret.val = x;
         }
-        return {pos, val};
+        return {ret, it};
     }
 };
 
