@@ -1,7 +1,7 @@
 #include "common.hpp"
 #include "include/elias_fano.hpp"
 
-constexpr uint64_t sequence_length = 10000;
+constexpr uint64_t sequence_length = 100;
 
 template <bool index_zeros, bool encode_prefix_sum>
 elias_fano<index_zeros, encode_prefix_sum> encode_with_elias_fano(
@@ -10,6 +10,7 @@ elias_fano<index_zeros, encode_prefix_sum> encode_with_elias_fano(
               << ", encode_prefix_sum=" << encode_prefix_sum << ">..." << std::endl;
     elias_fano<index_zeros, encode_prefix_sum> ef;
     ef.encode(seq.begin(), seq.size());
+    REQUIRE(ef.size() == seq.size() + encode_prefix_sum);
     std::cout << "ef.size() = " << ef.size() << '\n';
     std::cout << "ef.back() = " << ef.back() << '\n';
     std::cout << "measured bits/int = " << (8.0 * ef.num_bytes()) / ef.size() << std::endl;
@@ -31,22 +32,113 @@ TEST_CASE("access") {
     std::cout << "EVERYTHING OK!" << std::endl;
 }
 
-TEST_CASE("iterator") {
+TEST_CASE("iterator::next") {
     std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
     constexpr bool index_zeros = true;
     constexpr bool encode_prefix_sum = false;
     auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
+
     std::cout << "checking correctness of iterator..." << std::endl;
+
     auto it = ef.begin();
-    uint64_t i = 0;
-    while (it.has_next()) {
-        uint64_t got = it.next();  // get next integer
+    for (uint64_t i = 0; i != sequence_length; ++i, it.next()) {
+        uint64_t got = it.value();
         uint64_t expected = seq[i];
         REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
                                                 << sequence_length << " but expected " << expected);
+        REQUIRE(it.position() == i);
+        REQUIRE(it.has_next() == true);
+    }
+    REQUIRE(it.position() == sequence_length);
+    REQUIRE(it.has_next() == false);
+
+    uint64_t i = 0;
+    it = ef.begin();
+    while (it.has_next()) {
+        uint64_t got = it.value();
+        uint64_t expected = seq[i];
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
+                                                << sequence_length << " but expected " << expected);
+        REQUIRE(it.position() == i);
+        REQUIRE(it.has_next() == true);
+        it.next();
         ++i;
     }
-    assert(i == sequence_length);
+    REQUIRE(i == sequence_length);
+    REQUIRE(it.position() == sequence_length);
+    REQUIRE(it.has_next() == false);
+
+    std::cout << "EVERYTHING OK!" << std::endl;
+}
+
+TEST_CASE("get_iterator_at with iterator::next") {
+    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
+    constexpr bool index_zeros = true;
+    constexpr bool encode_prefix_sum = false;
+    auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
+
+    std::cout << "checking correctness of iterator..." << std::endl;
+
+    uint64_t pos = test::get_random_uint(sequence_length);
+    std::cout << "pos = " << pos << std::endl;
+    assert(pos <= sequence_length);
+    auto it = ef.get_iterator_at(pos);
+    for (uint64_t i = pos; i != sequence_length; ++i, it.next()) {
+        uint64_t got = it.value();
+        uint64_t expected = seq[i];
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
+                                                << sequence_length << " but expected " << expected);
+        REQUIRE(it.position() == i);
+        REQUIRE(it.has_next() == true);
+    }
+    REQUIRE(it.position() == sequence_length);
+    REQUIRE(it.has_next() == false);
+
+    uint64_t i = pos;
+    it = ef.get_iterator_at(pos);
+    while (it.has_next()) {
+        uint64_t got = it.value();
+        uint64_t expected = seq[i];
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
+                                                << sequence_length << " but expected " << expected);
+        REQUIRE(it.position() == i);
+        REQUIRE(it.has_next() == true);
+        it.next();
+        ++i;
+    }
+    REQUIRE(i == sequence_length);
+    REQUIRE(it.position() == sequence_length);
+    REQUIRE(it.has_next() == false);
+
+    std::cout << "EVERYTHING OK!" << std::endl;
+}
+
+TEST_CASE("get_iterator_at with mix of iterator::next and iterator::prev_value") {
+    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
+    constexpr bool index_zeros = true;
+    constexpr bool encode_prefix_sum = false;
+    auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
+
+    std::cout << "checking correctness of iterator..." << std::endl;
+
+    uint64_t pos = test::get_random_uint(sequence_length);
+    if (pos == 0) pos = 1;
+    std::cout << "pos = " << pos << std::endl;
+    assert(pos <= sequence_length);
+    auto it = ef.get_iterator_at(pos);
+    for (uint64_t i = pos; i != sequence_length; ++i, it.next()) {
+        uint64_t got = it.value();
+        uint64_t expected = seq[i];
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
+                                                << sequence_length << " but expected " << expected);
+
+        std::cout << i << "/" << sequence_length << std::endl;
+        got = it.prev_value();
+        expected = seq[i - 1];
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i - 1 << "/"
+                                                << sequence_length << " but expected " << expected);
+    }
+
     std::cout << "EVERYTHING OK!" << std::endl;
 }
 
@@ -262,15 +354,12 @@ TEST_CASE("save_load") {
     REQUIRE(num_saved_bytes == num_loaded_bytes);
     std::cout << "checking correctness of iterator..." << std::endl;
     auto it = ef_loaded.begin();
-    uint64_t i = 0;
-    while (it.has_next()) {
-        uint64_t got = it.next();  // get next integer
+    for (uint64_t i = 0; i != sequence_length; ++i, it.next()) {
+        uint64_t got = it.value();
         uint64_t expected = seq[i];
         REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
                                                 << sequence_length << " but expected " << expected);
-        ++i;
     }
-    assert(i == sequence_length);
     std::remove(output_filename.c_str());
     std::cout << "EVERYTHING OK!" << std::endl;
 }
@@ -295,14 +384,11 @@ TEST_CASE("build_from_compact_vector_iterator") {
         std::cout << "measured bits/int = " << (8.0 * ef.num_bytes()) / ef.size() << std::endl;
     }
     auto it = ef.begin();
-    uint64_t i = 0;
-    while (it.has_next()) {
-        uint64_t got = it.next();  // get next integer
+    for (uint64_t i = 0; i != sequence_length; ++i, it.next()) {
+        uint64_t got = it.value();
         uint64_t expected = seq[i];
         REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
                                                 << sequence_length << " but expected " << expected);
-        ++i;
     }
-    assert(i == sequence_length);
     std::cout << "EVERYTHING OK!" << std::endl;
 }

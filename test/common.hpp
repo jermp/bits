@@ -24,6 +24,7 @@ std::vector<uint64_t> get_sequence(const uint64_t sequence_length,  //
     std::poisson_distribution<uint64_t> distr(mean);
     std::vector<uint64_t> seq(sequence_length);
     std::generate(seq.begin(), seq.end(), [&]() { return distr(rng) % (max_int + 1); });
+    assert(seq.size() == sequence_length);
     return seq;
 }
 
@@ -47,6 +48,7 @@ std::vector<uint64_t> get_sorted_sequence(const uint64_t sequence_length,   //
         universe += val + all_distinct;
         return universe;
     });
+    assert(seq.size() == sequence_length);
     assert(seq.back() == universe);
     assert(std::is_sorted(seq.begin(), seq.end()));
     return seq;

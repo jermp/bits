@@ -52,8 +52,24 @@ TEST_CASE("iterator::operator++") {
     for (uint64_t i = 0; i != seq.size(); ++i, ++cv_it) {
         uint64_t got = *cv_it;
         uint64_t expected = seq[i];
-        REQUIRE_MESSAGE(got == seq[i], "got " << got << " at position " << i << "/" << seq.size()
-                                              << " but expected " << expected);
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/" << seq.size()
+                                                << " but expected " << expected);
+    }
+    std::cout << "EVERYTHING OK!" << std::endl;
+}
+
+TEST_CASE("iterator::operator--") {
+    const uint64_t max_int = test::get_random_uint();
+    std::cout << "max_int = " << max_int << std::endl;
+    std::vector<uint64_t> seq = test::get_sequence(sequence_length, max_int);
+    auto cv = encode_with_compact_vector(seq);
+    auto cv_it = cv.get_iterator_at(sequence_length - 1);
+    for (uint64_t i = 0; i != seq.size(); ++i, --cv_it) {
+        uint64_t got = *cv_it;
+        uint64_t expected = seq[(seq.size() - i) - 1];
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << (seq.size() - i) - 1
+                                                << "/" << seq.size() << " but expected "
+                                                << expected);
     }
     std::cout << "EVERYTHING OK!" << std::endl;
 }
@@ -78,11 +94,11 @@ TEST_CASE("iterator::operator-") {
     std::cout << "max_int = " << max_int << std::endl;
     std::vector<uint64_t> seq = test::get_sequence(sequence_length, max_int);
     auto cv = encode_with_compact_vector(seq);
-    auto cv_it = cv.end();
+    auto cv_it = cv.get_iterator_at(sequence_length - 1);
     for (uint64_t i = 0; i != seq.size(); ++i) {
-        uint64_t got = *((cv_it - i) - 1);
-        uint64_t expected = seq[seq.size() - i - 1];
-        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << seq.size() - i - 1
+        uint64_t got = *(cv_it - i);
+        uint64_t expected = seq[(seq.size() - i) - 1];
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << (seq.size() - i) - 1
                                                 << "/" << seq.size() << " but expected "
                                                 << expected);
     }

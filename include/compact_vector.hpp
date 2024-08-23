@@ -21,8 +21,10 @@ struct compact_vector  //
             , m_cur_val(0)
             , m_cur_block((i * vec->m_width) >> 6)
             , m_cur_shift((i * vec->m_width) & 63)
-            , m_vec(vec) {
-            read();  // read first val
+            , m_vec(vec)  //
+        {
+            if (i >= m_vec->size()) return;
+            read();
         }
 
         uint64_t operator*() { return m_cur_val; }
@@ -30,6 +32,13 @@ struct compact_vector  //
         enumerator& operator++() {
             ++m_i;
             read();
+            return *this;
+        }
+
+        enumerator& operator--() {
+            --m_i;
+            enumerator copy(m_vec, m_i);
+            *this = copy;
             return *this;
         }
 
@@ -130,7 +139,6 @@ struct compact_vector  //
         typedef enumerator<builder> iterator;
         iterator get_iterator_at(uint64_t pos) const { return iterator(this, pos); }
         iterator begin() const { return get_iterator_at(0); }
-        iterator end() const { return get_iterator_at(size()); }
 
         void build(compact_vector& cv) {
             cv.m_size = m_size;
@@ -203,7 +211,6 @@ struct compact_vector  //
     typedef enumerator<compact_vector> iterator;
     iterator get_iterator_at(uint64_t pos) const { return iterator(this, pos); }
     iterator begin() const { return get_iterator_at(0); }
-    iterator end() const { return get_iterator_at(size()); }
 
     uint64_t num_bytes() const {
         return sizeof(m_size) + sizeof(m_width) + sizeof(m_mask) + essentials::vec_bytes(m_data);

@@ -149,16 +149,10 @@ struct bit_vector {
 
     bit_vector() : m_num_bits(0) {}
 
-    // void swap(bit_vector& other) {
-    //     std::swap(other.m_num_bits, m_num_bits);
-    //     other.m_data.swap(m_data);
-    // }
-
-    // get i-th bit
-    uint64_t operator[](uint64_t i) const {
-        assert(i < num_bits());
-        uint64_t block = i >> 6;
-        uint64_t shift = i & 63;
+    uint64_t get(uint64_t pos) const {
+        assert(pos < num_bits());
+        uint64_t block = pos >> 6;
+        uint64_t shift = pos & 63;
         return m_data[block] >> shift & uint64_t(1);
     }
 
@@ -199,6 +193,7 @@ struct bit_vector {
             , m_num_64bit_words((bv->data()).size())  //
             , m_pos(pos)                              //
         {
+            assert(m_pos < bv->num_bits());
             fill_buf();
         }
 
@@ -221,12 +216,31 @@ struct bit_vector {
         }
 
         /*
-            Return the position of the next 1 after the current position.
+            Return the position, say p, of the next 1 from current position
+            and move to position p+1.
         */
         uint64_t next() {
             skip_zeros();
             assert(position() > 0);
             return position() - 1;
+        }
+
+        /*
+            Return the position of the previous 1 from position pos.
+            If the bit at position pos is already a 1, this returns pos.
+        */
+        uint64_t prev(uint64_t pos) {
+            uint64_t block = pos >> 6;
+            uint64_t shift = 64 - (pos & 63) - 1;
+            uint64_t word = m_data[block];
+            word = (word << shift) >> shift;
+            uint64_t ret;
+            while (!util::msbll(word, ret)) {
+                assert(block > 0);
+                word = m_data[--block];
+            }
+            ret += block << 6;
+            return ret;
         }
 
         /*
@@ -258,7 +272,7 @@ struct bit_vector {
         uint64_t m_avail;
 
         /*
-            Get the next 64 bits from current position.
+            Get 64 bits from current position.
         */
         void fill_buf() {
             uint64_t block = m_pos >> 6;
@@ -274,7 +288,6 @@ struct bit_vector {
 
     iterator get_iterator_at(uint64_t pos) const { return iterator(this, pos); }
     iterator begin() const { return get_iterator_at(0); }
-    iterator end() const { return get_iterator_at(num_bits()); }
 
     uint64_t num_bits() const { return m_num_bits; }
     std::vector<uint64_t> const& data() const { return m_data; }

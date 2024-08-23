@@ -85,47 +85,68 @@ struct elias_fano {
     }
 
     struct iterator {
-        iterator() : m_ef(nullptr) {}
+        iterator() : m_ef(nullptr), m_pos(0), m_l(0), m_high(0), m_val(0) {}
 
         iterator(elias_fano const* ef, uint64_t pos = 0)
-            : m_ef(ef), m_pos(pos), m_l(ef->m_low_bits.width()) {
-            assert(m_pos < m_ef->size());
+            : m_ef(ef)
+            , m_pos(pos)
+            , m_l(ef->m_low_bits.width())
+            , m_high(0)
+            , m_val(0)  //
+        {
+            if (!has_next() or m_ef->m_high_bits_d1.num_positions() == 0) return;
             assert(m_l < 64);
-            if (m_ef->m_high_bits_d1.num_positions() == 0) return;
             uint64_t begin = m_ef->m_high_bits_d1.select(m_ef->m_high_bits, m_pos);
             m_high_bits_it = m_ef->m_high_bits.get_iterator_at(begin);
             m_low_bits_it = m_ef->m_low_bits.get_iterator_at(m_pos);
+            m_high = m_high_bits_it.next();
+            read();
         }
 
-        bool good() const { return m_ef != nullptr; }
         bool has_next() const { return m_pos < m_ef->size(); }
+        bool has_prev() const { return m_pos > 0; }
+        uint64_t value() const { return m_val; }
+        uint64_t position() const { return m_pos; }
 
-        uint64_t next() {
-            assert(good() and has_next());
-            uint64_t high = m_high_bits_it.next();
-            assert(high == m_ef->m_high_bits_d1.select(m_ef->m_high_bits, m_pos));
-            uint64_t low = *m_low_bits_it;
-            uint64_t val = (((high - m_pos) << m_l) | low);
+        void next() {
             ++m_pos;
+            if (!has_next()) return;
+            m_high = m_high_bits_it.next();
             ++m_low_bits_it;
-            return val;
+            read();
+        }
+
+        /*
+            Return the value before the current position.
+        */
+        uint64_t prev_value() {
+            assert(m_pos > 0);
+            uint64_t pos = m_pos - 1;
+            uint64_t high = m_high_bits_it.prev(m_high - 1);
+            uint64_t low = *(m_low_bits_it - 1);
+            assert(high == m_ef->m_high_bits_d1.select(m_ef->m_high_bits, pos));
+            return (((high - pos) << m_l) | low);
         }
 
     private:
         elias_fano const* m_ef;
         uint64_t m_pos;
         uint64_t m_l;
+        uint64_t m_high;
+        uint64_t m_val;
         bit_vector::iterator m_high_bits_it;
         compact_vector::iterator m_low_bits_it;
+
+        void read() {
+            assert(m_pos < m_ef->size());
+            assert(m_high == m_ef->m_high_bits_d1.select(m_ef->m_high_bits, m_pos));
+            uint64_t low = *m_low_bits_it;
+            m_val = (((m_high - m_pos) << m_l) | low);
+        }
     };
 
-    iterator at(uint64_t pos) const {
-        assert(pos < size());
-        return iterator(this, pos);
-    }
-
-    iterator begin() const { return at(0); }
-    iterator end() const { return at(size()); }
+    iterator get_iterator_at(uint64_t pos) const { return iterator(this, pos); }
+    iterator begin() const { return get_iterator_at(0); }
 
     inline uint64_t access(uint64_t i) const {
         assert(i < size());
@@ -251,12 +272,14 @@ private:
         // assert(begin <= end);
         // return binary search for x in [begin, end)
 
-        auto it = at(begin);
+        auto it = get_iterator_at(begin);
         uint64_t pos = begin;
-        uint64_t val = it.next();
+        uint64_t val = it.value();
         while (val < x) {
             ++pos;
-            val = it.next();
+            // TODO: no need for bound checking??
+            it.next();
+            val = it.value();
         }
         assert(val >= x);
 
@@ -272,12 +295,13 @@ private:
     inline std::pair<uint64_t, uint64_t> next_geq_rightmost(uint64_t x) const {
         auto [pos, val] = next_geq_leftmost(x);
         if (val == x and pos != size() - 1) {
-            auto it = at(pos);
-            val = it.next();
+            auto it = get_iterator_at(pos);
+            val = it.value();
             while (val == x) {  // keep scanning to pick the rightmost one
                 ++pos;
                 if (pos == size()) break;
-                val = it.next();
+                it.next();
+                val = it.value();
             }
             assert(val >= x);
             return {pos - 1, x};
