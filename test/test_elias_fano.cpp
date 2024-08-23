@@ -1,7 +1,7 @@
 #include "common.hpp"
 #include "include/elias_fano.hpp"
 
-constexpr uint64_t sequence_length = 100;
+constexpr uint64_t sequence_length = 10000;
 
 template <bool index_zeros, bool encode_prefix_sum>
 elias_fano<index_zeros, encode_prefix_sum> encode_with_elias_fano(
