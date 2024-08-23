@@ -150,7 +150,7 @@ struct elias_fano {
     iterator get_iterator_at(uint64_t pos) const { return iterator(this, pos); }
     iterator begin() const { return get_iterator_at(0); }
 
-    inline uint64_t access(uint64_t i) const {
+    uint64_t access(uint64_t i) const {
         assert(i < size());
         return ((m_high_bits_d1.select(m_high_bits, i) - i) << m_low_bits.width()) |
                m_low_bits.access(i);
@@ -168,7 +168,7 @@ struct elias_fano {
             diff(3) = V[3] = V'[4] - V'[3] = 11-10 = 1
             diff(4) = V[4] = V'[5] - V'[4] = 27-11 = 16
     */
-    inline uint64_t diff(uint64_t i) const {
+    uint64_t diff(uint64_t i) const {
         assert(i < size() && encode_prefix_sum);
         uint64_t low1 = m_low_bits.access(i);
         uint64_t low2 = m_low_bits.access(i + 1);
@@ -197,7 +197,7 @@ struct elias_fano {
         next_geq(17) = [10,17]
         next_geq(23) = [11,17] (saturate)
     */
-    inline std::pair<uint64_t, uint64_t> next_geq(uint64_t x) const { return next_geq_leftmost(x); }
+    std::pair<uint64_t, uint64_t> next_geq(uint64_t x) const { return next_geq_leftmost(x); }
 
     /*
         Return the position of the rightmost largest element that is <= x.
@@ -216,13 +216,13 @@ struct elias_fano {
         prev_leq(17) = 11
         prev_leq(23) = 11 (saturate, because 23 >= back() = 17)
     */
-    inline uint64_t prev_leq(uint64_t x) const {
+    uint64_t prev_leq(uint64_t x) const {
         auto [pos, val] = next_geq_rightmost(x);
         return pos - (val > x);
     }
 
-    inline uint64_t back() const { return m_universe; }
-    inline uint64_t size() const { return m_low_bits.size(); }
+    uint64_t back() const { return m_universe; }
+    uint64_t size() const { return m_low_bits.size(); }
 
     uint64_t num_bytes() const {
         return sizeof(m_universe) + m_high_bits.num_bytes() + m_high_bits_d1.num_bytes() +
@@ -259,7 +259,7 @@ private:
         Return [position,value] of the leftmost smallest element that is >= x.
         Return [size()-1,back()] if x > back().
     */
-    inline std::pair<uint64_t, uint64_t> next_geq_leftmost(uint64_t x) const {
+    std::pair<uint64_t, uint64_t> next_geq_leftmost(uint64_t x) const {
         static_assert(index_zeros == true, "must build index on zeros");
         assert(m_high_bits_d0.num_positions());
 
@@ -279,13 +279,17 @@ private:
         uint64_t val = it.value();
         while (val < x) {
             ++pos;
-            // TODO: no need for bound checking??
+            /*
+                Note: no need for bound checking here
+                because x <= back(), hence pos cannot
+                be equal to size().
+            */
             it.next();
             val = it.value();
         }
-        assert(val >= x);
-
         /* now pos is the position of the leftmost element that is >= x */
+        assert(val >= x);
+        assert(pos < size());
         assert(val == access(pos));
         return {pos, val};
     }
@@ -294,7 +298,7 @@ private:
         Return [position,value] of the rightmost smallest element that is >= x.
         Return [size()-1,back()] if x >= back().
     */
-    inline std::pair<uint64_t, uint64_t> next_geq_rightmost(uint64_t x) const {
+    std::pair<uint64_t, uint64_t> next_geq_rightmost(uint64_t x) const {
         auto [pos, val] = next_geq_leftmost(x);
         if (val == x and pos != size() - 1) {
             auto it = get_iterator_at(pos);
