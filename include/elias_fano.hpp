@@ -85,13 +85,12 @@ struct elias_fano {
     }
 
     struct iterator {
-        iterator() : m_ef(nullptr), m_pos(0), m_l(0), m_high(0), m_val(0) {}
+        iterator() : m_ef(nullptr), m_pos(0), m_l(0), m_val(0) {}
 
         iterator(elias_fano const* ef, uint64_t pos = 0)
             : m_ef(ef)
             , m_pos(pos)
             , m_l(ef->m_low_bits.width())
-            , m_high(0)
             , m_val(0)  //
         {
             if (!has_next() or m_ef->m_high_bits_d1.num_positions() == 0) return;
@@ -99,8 +98,7 @@ struct elias_fano {
             uint64_t begin = m_ef->m_high_bits_d1.select(m_ef->m_high_bits, m_pos);
             m_high_bits_it = m_ef->m_high_bits.get_iterator_at(begin);
             m_low_bits_it = m_ef->m_low_bits.get_iterator_at(m_pos);
-            m_high = m_high_bits_it.next();
-            read();
+            read_next_value();
         }
 
         bool has_next() const { return m_pos < m_ef->size(); }
@@ -111,9 +109,7 @@ struct elias_fano {
         void next() {
             ++m_pos;
             if (!has_next()) return;
-            m_high = m_high_bits_it.next();
-            ++m_low_bits_it;
-            read();
+            read_next_value();
         }
 
         /*
@@ -122,9 +118,14 @@ struct elias_fano {
         uint64_t prev_value() {
             assert(m_pos > 0);
             uint64_t pos = m_pos - 1;
-            uint64_t high = m_high_bits_it.prev(m_high - 1);
-            uint64_t low = *(m_low_bits_it - 1);
+            /*
+                Read_next_value() sets the state ahead of 1 position,
+                hence must go back by 2 to get previous value.
+            */
+            assert(m_high_bits_it.position() >= 2);
+            uint64_t high = m_high_bits_it.prev(m_high_bits_it.position() - 2);
             assert(high == m_ef->m_high_bits_d1.select(m_ef->m_high_bits, pos));
+            uint64_t low = *(m_low_bits_it - 2);
             return (((high - pos) << m_l) | low);
         }
 
@@ -132,16 +133,17 @@ struct elias_fano {
         elias_fano const* m_ef;
         uint64_t m_pos;
         uint64_t m_l;
-        uint64_t m_high;
         uint64_t m_val;
         bit_vector::iterator m_high_bits_it;
         compact_vector::iterator m_low_bits_it;
 
-        void read() {
+        void read_next_value() {
             assert(m_pos < m_ef->size());
-            assert(m_high == m_ef->m_high_bits_d1.select(m_ef->m_high_bits, m_pos));
+            uint64_t high = m_high_bits_it.next();
+            assert(high == m_ef->m_high_bits_d1.select(m_ef->m_high_bits, m_pos));
             uint64_t low = *m_low_bits_it;
-            m_val = (((m_high - m_pos) << m_l) | low);
+            m_val = (((high - m_pos) << m_l) | low);
+            ++m_low_bits_it;
         }
     };
 

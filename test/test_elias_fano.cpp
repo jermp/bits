@@ -131,8 +131,6 @@ TEST_CASE("get_iterator_at with mix of iterator::next and iterator::prev_value")
         uint64_t expected = seq[i];
         REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
                                                 << sequence_length << " but expected " << expected);
-
-        std::cout << i << "/" << sequence_length << std::endl;
         got = it.prev_value();
         expected = seq[i - 1];
         REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i - 1 << "/"
