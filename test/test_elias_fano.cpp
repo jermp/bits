@@ -320,7 +320,6 @@ TEST_CASE("prev_leq") {
                             "expected pos " << uint64_t(-1) << " but got pos = " << pos);
             continue;
         }
-        // auto got = pos < ef.size() ? ef.access(pos) : ef.back();
         // std::cout << "x=" << x << "; pos=" << pos << "; got=" << got << std::endl;
         auto it = std::upper_bound(seq.begin(), seq.end(), x) - 1;
         uint64_t expected = *it;
@@ -330,6 +329,137 @@ TEST_CASE("prev_leq") {
                                      << " but expected " << expected << " at position "
                                      << pos_expected);
     }
+    std::cout << "EVERYTHING OK!" << std::endl;
+}
+
+TEST_CASE("small_locate") {
+    std::vector<uint64_t> seq{1, 1, 1, 3, 3, 5, 6, 6, 6, 9, 13, 23, 23, 23};
+    constexpr bool index_zeros = true;
+    constexpr bool encode_prefix_sum = false;
+    auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
+
+    auto p = ef.locate(0);
+    REQUIRE(p.first.pos == uint64_t(-1));  // undefined since 0 < 1
+    REQUIRE(p.first.val == uint64_t(-1));
+    REQUIRE(p.second.pos == 0);
+    REQUIRE(p.second.val == 1);
+
+    p = ef.locate(1);
+    REQUIRE(p.first.pos == 2);  // rightmost
+    REQUIRE(p.first.val == 1);
+    REQUIRE(p.second.pos == 3);  // leftmost
+    REQUIRE(p.second.val == 3);
+
+    p = ef.locate(3);
+    REQUIRE(p.first.pos == 4);  // rightmost
+    REQUIRE(p.first.val == 3);
+    REQUIRE(p.second.pos == 5);
+    REQUIRE(p.second.val == 5);
+
+    p = ef.locate(6);
+    REQUIRE(p.first.pos == 8);  // rightmost
+    REQUIRE(p.first.val == 6);
+    REQUIRE(p.second.pos == 9);
+    REQUIRE(p.second.val == 9);
+
+    p = ef.locate(23);
+    REQUIRE(p.first.pos == seq.size() - 1);  // rightmost
+    REQUIRE(p.first.val == 23);
+    REQUIRE(p.second.pos == uint64_t(-1));  // undefined since there is no integer that is > back()
+    REQUIRE(p.second.val == uint64_t(-1));
+
+    p = ef.locate(100);  // saturate
+    REQUIRE(p.first.pos == seq.size() - 1);
+    REQUIRE(p.first.val == 23);
+    REQUIRE(p.second.pos == uint64_t(-1));  // undefined since there is no integer that is > back()
+    REQUIRE(p.second.val == uint64_t(-1));
+}
+
+TEST_CASE("locate") {
+    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
+    constexpr bool index_zeros = true;
+    constexpr bool encode_prefix_sum = false;
+    auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
+
+    std::cout << "checking correctness of locate..." << std::endl;
+
+    uint64_t i = 0;
+    for (auto x : seq)  //
+    {
+        /* since x is in the sequence, p.first.pos  must be i */
+        auto p = ef.locate(x);
+        uint64_t lo_pos = p.first.pos;
+        uint64_t lo_val = p.first.val;
+        uint64_t hi_pos = p.second.pos;
+        uint64_t hi_val = p.second.val;
+        uint64_t expected_lo_pos = i;
+        uint64_t expected_lo_val = seq[i];
+        uint64_t expected_hi_pos = uint64_t(-1);
+        uint64_t expected_hi_val = uint64_t(-1);
+        if (expected_lo_pos != ef.size() - 1) {
+            expected_hi_pos = i + 1;
+            expected_hi_val = seq[i + 1];
+        }
+
+        /* if we have some repeated values, lo_pos will be the rightmost occurrence */
+        if (lo_pos > 0 and seq[lo_pos] == seq[lo_pos - 1]) {
+            i = lo_pos + 1;
+            continue;
+        }
+
+        bool good = (lo_val == expected_lo_val) && (lo_pos == expected_lo_pos);
+        REQUIRE_MESSAGE(good, "got " << lo_val << " at position " << lo_pos << "/"
+                                     << sequence_length << " but expected " << expected_lo_val
+                                     << " at position " << expected_lo_pos);
+        good = (hi_val == expected_hi_val) && (hi_pos == expected_hi_pos);
+        REQUIRE_MESSAGE(good, "got " << hi_val << " at position " << hi_pos << "/"
+                                     << sequence_length << " but expected " << expected_hi_val
+                                     << " at position " << expected_hi_pos);
+
+        ++i;
+    }
+    std::cout << "EVERYTHING OK!" << std::endl;
+
+    std::cout << "checking correctness of locate..." << std::endl;
+
+    const uint64_t front = ef.access(0);
+    for (i = 0; i != 10000; ++i)  //
+    {
+        const uint64_t x = seq[rand() % sequence_length] + (i % 2 == 0 ? 3 : -3);  // get some value
+        auto p = ef.locate(x);
+        uint64_t lo_pos = p.first.pos;
+        uint64_t lo_val = p.first.val;
+        uint64_t hi_pos = p.second.pos;
+        uint64_t hi_val = p.second.val;
+
+        uint64_t expected_lo_pos = uint64_t(-1);
+        uint64_t expected_lo_val = uint64_t(-1);
+        uint64_t expected_hi_pos = uint64_t(-1);
+        uint64_t expected_hi_val = uint64_t(-1);
+
+        if (x < front) {
+            expected_hi_pos = 0;
+            expected_hi_val = front;
+        } else {
+            auto it = std::upper_bound(seq.begin(), seq.end(), x) - 1;
+            expected_lo_pos = std::distance(seq.begin(), it);
+            expected_lo_val = *it;
+            if (expected_lo_pos != ef.size() - 1) {
+                expected_hi_pos = expected_lo_pos + 1;
+                expected_hi_val = *(it + 1);
+            }
+        }
+
+        bool good = (lo_val == expected_lo_val) && (lo_pos == expected_lo_pos);
+        REQUIRE_MESSAGE(good, "got " << lo_val << " at position " << lo_pos << "/"
+                                     << sequence_length << " but expected " << expected_lo_val
+                                     << " at position " << expected_lo_pos);
+        good = (hi_val == expected_hi_val) && (hi_pos == expected_hi_pos);
+        REQUIRE_MESSAGE(good, "got " << hi_val << " at position " << hi_pos << "/"
+                                     << sequence_length << " but expected " << expected_hi_val
+                                     << " at position " << expected_hi_pos);
+    }
+
     std::cout << "EVERYTHING OK!" << std::endl;
 }
 

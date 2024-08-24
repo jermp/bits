@@ -202,29 +202,69 @@ struct elias_fano {
         next_geq(17) = [10,17]
         next_geq(23) = [11,17] (saturate)
     */
-    return_value next_geq(uint64_t x) const { return next_geq_leftmost(x).first; }
+    return_value next_geq(const uint64_t x) const { return next_geq_leftmost(x).first; }
 
     /*
         Return [position,value] of the rightmost largest element that is <= x.
         Return [size()-1,back()] if x >= back().
-        Return [-1,-1] if x < front() (result is undefined).
+        Return [uint64(-1),uint64(-1)] if x < front()
+        (result is undefined; uint64(-1) = 2^64-1).
 
         Example.
 
         1, 3, 3, 4, 5, 6, 6, 9, 12, 14, 17, 17
         0  1  2  3  4  5  6  7   8   9  10  11
 
-        prev_leq(0) = [-1,-1] (undefined, because 0 < front() = 1)
+        prev_leq(0) = [uint64(-1),uint64(-1)] (undefined, because 0 < front() = 1)
         prev_leq(3) = [2,3]
         prev_leq(6) = [6,6]
         prev_leq(7) = [6,6]
         prev_leq(17) = [11,17]
         prev_leq(23) = [11,17] (saturate, because 23 >= back() = 17)
     */
-    return_value prev_leq(uint64_t x) const {
+    return_value prev_leq(const uint64_t x) const {
         auto [ret, it] = next_geq_rightmost(x);
         if (ret.val > x) return {ret.pos - 1, ret.pos != 0 ? it.prev_value() : uint64_t(-1)};
         return ret;
+    }
+
+    /*
+        Determine integers lo and hi, with lo < hi, such that lo <= x < hi
+        and lo is the largest rightmost value that is <= x (hence, it is prev_leq(x))
+        and hi is the smallest leftmost value that is > x.
+
+        Return the tuple [lo_pos, lo, hi_pos, hi].
+
+        Return [position,value] of the rightmost largest element that is <= x.
+        Return [size()-1,back()] if x >= back().
+        Return [uint64(-1),uint64(-1)] if x < front() (result is undefined;
+        uint64(-1) = 2^64-1).
+
+        Example.
+
+        1, 3, 3, 4, 5, 6, 6, 9, 12, 14, 17, 17
+        0  1  2  3  4  5  6  7   8   9  10  11
+
+        locate(0) = [uint64(-1),uint64(-1), 0, 1]
+        locate(3) = [2,3,3,4]
+        locate(6) = [6,6,7,9]
+        locate(7) = [6,6,7,9]
+        locate(17) = [11,17,11,17]
+        locate(23) = [11,17,uint64(-1),uint64(-1)] (saturate, because 23 >= back() = 17)
+    */
+    std::pair<return_value, return_value> locate(const uint64_t x) const {
+        auto [lo, it] = next_geq_rightmost(x);
+        if (lo.val > x) {
+            lo.val = lo.pos != 0 ? it.prev_value() : uint64_t(-1);
+            lo.pos -= 1;
+        }
+        return_value hi{uint64_t(-1), uint64_t(-1)};
+        if (lo.pos != size() - 1) {
+            hi.pos = lo.pos + 1;
+            hi.val = it.value();  // element next to lo.val
+            assert(it.position() == hi.pos);
+        }
+        return {lo, hi};
     }
 
     uint64_t back() const { return m_universe; }
@@ -265,7 +305,7 @@ private:
         Return [position,value] of the leftmost smallest element that is >= x.
         Return [size()-1,back()] if x > back().
     */
-    std::pair<return_value, iterator> next_geq_leftmost(uint64_t x) const {
+    std::pair<return_value, iterator> next_geq_leftmost(const uint64_t x) const {
         static_assert(index_zeros == true, "must build index on zeros");
         assert(m_high_bits_d0.num_positions());
 
@@ -305,7 +345,7 @@ private:
         Return [position,value] of the rightmost smallest element that is >= x.
         Return [size()-1,back()] if x >= back().
     */
-    std::pair<return_value, iterator> next_geq_rightmost(uint64_t x) const {
+    std::pair<return_value, iterator> next_geq_rightmost(const uint64_t x) const {
         auto [ret, it] = next_geq_leftmost(x);
         if (ret.val == x and ret.pos != size() - 1) {
             assert(it.position() == ret.pos);
