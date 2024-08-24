@@ -9,7 +9,10 @@ elias_fano<index_zeros, encode_prefix_sum> encode_with_elias_fano(
     std::cout << "encoding seq with elias_fano<index_zeros=" << index_zeros
               << ", encode_prefix_sum=" << encode_prefix_sum << ">..." << std::endl;
     elias_fano<index_zeros, encode_prefix_sum> ef;
-    ef.encode(seq.begin(), seq.size());
+    ef.encode(seq.begin(), seq.size()  //
+                                       // ,
+                                       // seq.back() + 10000000 /* provide a custom universe */
+    );
     REQUIRE(ef.size() == seq.size() + encode_prefix_sum);
     std::cout << "ef.size() = " << ef.size() << '\n';
     std::cout << "ef.back() = " << ef.back() << '\n';

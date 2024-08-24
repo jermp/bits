@@ -15,45 +15,47 @@ template <  //
     bool encode_prefix_sum = false  //
     >
 struct elias_fano {
-    elias_fano() : m_universe(0) {}
+    elias_fano() : m_back(0) {}
 
     template <typename Iterator>
-    void encode(Iterator begin, uint64_t n) {
+    void encode(Iterator begin, uint64_t n, uint64_t universe = uint64_t(-1)) {
         if (n == 0) return;
 
-        /* calculate the universe of representation, which is the largest element */
-        assert(m_universe == 0);
         if constexpr (encode_prefix_sum) {
+            universe = 0;
             auto tmp = begin;
-            for (uint64_t i = 0; i != n; ++i, ++tmp) m_universe += *tmp;
+            for (uint64_t i = 0; i != n; ++i, ++tmp) universe += *tmp;
             n = n + 1;  // because a zero is added at the beginning
         } else {
-            if constexpr (std::is_same_v<typename Iterator::iterator_category,
-                                         std::random_access_iterator_tag>) {
-                m_universe = *(begin + (n - 1));
-            } else {  // scan
-                auto tmp = begin;
-                for (uint64_t i = 0; i != n - 1; ++i, ++tmp)
-                    ;
-                m_universe = *tmp;
+            if (universe == uint64_t(-1))  // otherwise use the provided universe
+            {
+                if constexpr (std::is_same_v<typename Iterator::iterator_category,
+                                             std::random_access_iterator_tag>) {
+                    universe = *(begin + (n - 1));
+                } else {  // scan
+                    auto tmp = begin;
+                    for (uint64_t i = 0; i != n - 1; ++i, ++tmp)
+                        ;
+                    universe = *tmp;
+                }
             }
         }
 
         /* This version takes at most: n*floor(log(U/n)) + 3*n bits */
-        uint64_t l = uint64_t((n && m_universe / n) ? util::msb(m_universe / n) : 0);
+        uint64_t l = uint64_t((n && universe / n) ? util::msb(universe / n) : 0);
 
         /* This version takes at most: n*ceil(log(U/n)) + 2*n bits */
-        // uint64_t l = std::ceil(std::log2(static_cast<double>(m_universe) / n));
+        // uint64_t l = std::ceil(std::log2(static_cast<double>(universe) / n));
 
         /*
             Q. Which version is better?
             A. It depends on the indexes built on the high_bits.
         */
 
-        bit_vector::builder bvb_high_bits(n + (m_universe >> l) + 1);
+        bit_vector::builder bvb_high_bits(n + (universe >> l) + 1);
         compact_vector::builder cvb_low_bits(n, l);
 
-        uint64_t low_mask = (uint64_t(1) << l) - 1;
+        const uint64_t low_mask = (uint64_t(1) << l) - 1;
         uint64_t last = 0;
 
         // add a zero at the beginning
@@ -78,6 +80,7 @@ struct elias_fano {
             last = v;
         }
 
+        m_back = last;
         bvb_high_bits.build(m_high_bits);
         cvb_low_bits.build(m_low_bits);
         m_high_bits_d1.build(m_high_bits);
@@ -267,16 +270,16 @@ struct elias_fano {
         return {lo, hi};
     }
 
-    uint64_t back() const { return m_universe; }
+    uint64_t back() const { return m_back; }
     uint64_t size() const { return m_low_bits.size(); }
 
     uint64_t num_bytes() const {
-        return sizeof(m_universe) + m_high_bits.num_bytes() + m_high_bits_d1.num_bytes() +
+        return sizeof(m_back) + m_high_bits.num_bytes() + m_high_bits_d1.num_bytes() +
                m_high_bits_d0.num_bytes() + m_low_bits.num_bytes();
     }
 
     void swap(elias_fano& other) {
-        std::swap(m_universe, other.m_universe);
+        std::swap(m_back, other.m_back);
         m_high_bits.swap(other.m_high_bits);
         m_high_bits_d1.swap(other.m_high_bits_d1);
         m_high_bits_d0.swap(other.m_high_bits_d0);
@@ -294,7 +297,7 @@ struct elias_fano {
     }
 
 private:
-    uint64_t m_universe;
+    uint64_t m_back;
     bit_vector m_high_bits;
     darray1 m_high_bits_d1;
     darray0 m_high_bits_d0;
@@ -302,7 +305,7 @@ private:
 
     template <typename Visitor, typename T>
     static void visit_impl(Visitor& visitor, T&& t) {
-        visitor.visit(t.m_universe);
+        visitor.visit(t.m_back);
         visitor.visit(t.m_high_bits);
         visitor.visit(t.m_high_bits_d1);
         visitor.visit(t.m_high_bits_d0);
