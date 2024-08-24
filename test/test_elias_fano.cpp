@@ -484,7 +484,7 @@ TEST_CASE("diff") {
     std::cout << "EVERYTHING OK!" << std::endl;
 }
 
-TEST_CASE("save_load") {
+TEST_CASE("save_load_and_swap") {
     std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
     constexpr bool index_zeros = true;
     constexpr bool encode_prefix_sum = false;
@@ -496,16 +496,18 @@ TEST_CASE("save_load") {
     ef_type ef_loaded;
     uint64_t num_loaded_bytes = essentials::load(ef_loaded, output_filename.c_str());
     std::cout << "num_loaded_bytes = " << num_loaded_bytes << std::endl;
+    std::remove(output_filename.c_str());
     REQUIRE(num_saved_bytes == num_loaded_bytes);
     std::cout << "checking correctness of iterator..." << std::endl;
-    auto it = ef_loaded.begin();
+    ef_type other;
+    ef_loaded.swap(other);
+    auto it = other.begin();
     for (uint64_t i = 0; i != sequence_length; ++i, it.next()) {
         uint64_t got = it.value();
         uint64_t expected = seq[i];
         REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
                                                 << sequence_length << " but expected " << expected);
     }
-    std::remove(output_filename.c_str());
     std::cout << "EVERYTHING OK!" << std::endl;
 }
 

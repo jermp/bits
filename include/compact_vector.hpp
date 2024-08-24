@@ -152,6 +152,9 @@ struct compact_vector  //
             std::swap(m_size, other.m_size);
             std::swap(m_width, other.m_width);
             std::swap(m_mask, other.m_mask);
+            std::swap(m_back, other.m_back);
+            std::swap(m_cur_block, other.m_cur_block);
+            std::swap(m_cur_shift, other.m_cur_shift);
             m_data.swap(other.m_data);
         }
 

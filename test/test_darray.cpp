@@ -33,6 +33,26 @@ void run_test(const uint64_t max_int) {
         // std::cout << "select(" << i << ") = " << pos << std::endl;
         REQUIRE_MESSAGE(pos == seq[i], "got " << pos << " but expected " << seq[i]);
     }
+
+    const std::string output_filename("darray.bin");
+    uint64_t num_saved_bytes = essentials::save(select_index, output_filename.c_str());
+    std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    DArray select_index_loaded;
+    uint64_t num_loaded_bytes = essentials::load(select_index_loaded, output_filename.c_str());
+    std::cout << "num_loaded_bytes = " << num_loaded_bytes << std::endl;
+    std::remove(output_filename.c_str());
+    REQUIRE(num_saved_bytes == num_loaded_bytes);
+
+    DArray other;
+    select_index_loaded.swap(other);
+    REQUIRE(select_index.num_positions() == seq.size());
+    for (uint64_t i = 0; i != seq.size(); ++i) {
+        uint64_t pos = other.select(bv, i);  // position of the i-th bit set
+        // std::cout << "select(" << i << ") = " << pos << std::endl;
+        REQUIRE_MESSAGE(pos == seq[i], "got " << pos << " but expected " << seq[i]);
+    }
+
+    std::cout << "EVERYTHING OK!" << std::endl;
 }
 
 TEST_CASE("super_sparse1") { run_test<darray1, true>(32 * 1024); }

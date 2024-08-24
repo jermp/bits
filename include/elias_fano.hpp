@@ -275,6 +275,14 @@ struct elias_fano {
                m_high_bits_d0.num_bytes() + m_low_bits.num_bytes();
     }
 
+    void swap(elias_fano& other) {
+        std::swap(m_universe, other.m_universe);
+        m_high_bits.swap(other.m_high_bits);
+        m_high_bits_d1.swap(other.m_high_bits_d1);
+        m_high_bits_d0.swap(other.m_high_bits_d0);
+        m_low_bits.swap(other.m_low_bits);
+    }
+
     template <typename Visitor>
     void visit(Visitor& visitor) const {
         visit_impl(visitor, *this);

@@ -105,7 +105,7 @@ TEST_CASE("iterator::operator-") {
     std::cout << "EVERYTHING OK!" << std::endl;
 }
 
-TEST_CASE("save_load") {
+TEST_CASE("save_load_and_swap") {
     const uint64_t max_int = test::get_random_uint();
     std::cout << "max_int = " << max_int << std::endl;
     std::vector<uint64_t> seq = test::get_sequence(sequence_length, max_int);
@@ -116,13 +116,15 @@ TEST_CASE("save_load") {
     compact_vector cv_loaded;
     uint64_t num_loaded_bytes = essentials::load(cv_loaded, output_filename.c_str());
     std::cout << "num_loaded_bytes = " << num_loaded_bytes << std::endl;
+    std::remove(output_filename.c_str());
     REQUIRE(num_saved_bytes == num_loaded_bytes);
     std::cout << "checking correctness of iterator..." << std::endl;
-    auto it = cv_loaded.begin();
+    compact_vector other;
+    cv_loaded.swap(other);
+    auto it = other.begin();
     for (uint64_t i = 0; i != seq.size(); ++i, ++it) {
         REQUIRE_MESSAGE(*it == seq[i], "got " << *it << " at position " << i << "/" << seq.size()
                                               << " but expected " << seq[i]);
     }
-    std::remove(output_filename.c_str());
     std::cout << "EVERYTHING OK!" << std::endl;
 }

@@ -42,6 +42,32 @@ void run_test(const uint64_t max_int) {
         REQUIRE_MESSAGE(num_ones == i, "got " << num_ones << " but expected " << i);
         REQUIRE_MESSAGE(num_zeros == j - i, "got " << num_ones << " but expected " << j - i);
     }
+
+    const std::string output_filename("r9.bin");
+    uint64_t num_saved_bytes = essentials::save(rank_index, output_filename.c_str());
+    std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    rank9 rank_index_loaded;
+    uint64_t num_loaded_bytes = essentials::load(rank_index_loaded, output_filename.c_str());
+    std::cout << "num_loaded_bytes = " << num_loaded_bytes << std::endl;
+    std::remove(output_filename.c_str());
+    REQUIRE(num_saved_bytes == num_loaded_bytes);
+
+    rank9 other;
+    rank_index_loaded.swap(other);
+    REQUIRE(other.num_ones() == seq.size());
+    REQUIRE(other.rank1(B, 0) == 0);
+    for (uint64_t i = 0; i != seq.size(); ++i) {
+        uint64_t j = seq[i];
+        uint64_t num_ones = other.rank1(B, j);   // number of 1s in B[0..j)
+        uint64_t num_zeros = other.rank0(B, j);  // number of 0s in B[0..j)
+        REQUIRE(num_ones + num_zeros == j);
+        // std::cout << "rank1(" << j << ") = " << num_ones << std::endl;
+        // std::cout << "rank0(" << j << ") = " << num_zeros << std::endl;
+        REQUIRE_MESSAGE(num_ones == i, "got " << num_ones << " but expected " << i);
+        REQUIRE_MESSAGE(num_zeros == j - i, "got " << num_ones << " but expected " << j - i);
+    }
+
+    std::cout << "EVERYTHING OK!" << std::endl;
 }
 
 TEST_CASE("super_sparse") { run_test(32 * 1024); }

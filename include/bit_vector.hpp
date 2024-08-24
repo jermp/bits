@@ -8,8 +8,10 @@
 
 namespace bits {
 
-struct bit_vector {
-    struct builder {
+struct bit_vector  //
+{
+    struct builder  //
+    {
         builder() { clear(); }
 
         builder(uint64_t num_bits, bool init = 0) { resize(num_bits, init); }
@@ -293,6 +295,11 @@ struct bit_vector {
     std::vector<uint64_t> const& data() const { return m_data; }
 
     uint64_t num_bytes() const { return sizeof(m_num_bits) + essentials::vec_bytes(m_data); }
+
+    void swap(bit_vector& other) {
+        std::swap(m_num_bits, other.m_num_bits);
+        m_data.swap(other.m_data);
+    }
 
     template <typename Visitor>
     void visit(Visitor& visitor) const {

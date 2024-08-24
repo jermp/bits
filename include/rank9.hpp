@@ -74,6 +74,8 @@ struct rank9 {
 
     uint64_t num_bytes() const { return essentials::vec_bytes(m_block_rank_pairs); }
 
+    void swap(rank9& other) { m_block_rank_pairs.swap(other.m_block_rank_pairs); }
+
     template <typename Visitor>
     void visit(Visitor& visitor) {
         visit_impl(visitor, *this);

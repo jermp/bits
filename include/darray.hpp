@@ -86,6 +86,13 @@ struct darray {
                essentials::vec_bytes(m_overflow_positions);
     }
 
+    void swap(darray& other) {
+        std::swap(m_positions, other.m_positions);
+        m_block_inventory.swap(other.m_block_inventory);
+        m_subblock_inventory.swap(other.m_subblock_inventory);
+        m_overflow_positions.swap(other.m_overflow_positions);
+    }
+
     template <typename Visitor>
     void visit(Visitor& visitor) const {
         visit_impl(visitor, *this);
