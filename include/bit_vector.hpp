@@ -22,6 +22,8 @@ struct bit_vector  //
             m_cur_word = nullptr;
         }
 
+        void fill(bool init = 0) { std::fill(m_data.begin(), m_data.end(), uint64_t(-init)); }
+
         void resize(uint64_t num_bits, bool init = 0) {
             m_num_bits = num_bits;
             m_data.resize(essentials::words_for<uint64_t>(num_bits), uint64_t(-init));
