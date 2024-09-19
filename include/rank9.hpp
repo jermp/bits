@@ -4,6 +4,44 @@
 
 namespace bits {
 
+/*
+    The following class implements an index on top of an uncompressed
+    bitvector B[0..n) to support rank queries.
+
+    The first constant-time solution was described by Jacobson in his
+    Ph.D. thesis
+
+        Guy Joseph Jacobson. 1988. Succinct static data structures.
+        Ph.D. Dissertation. Carnegie Mellon University
+
+    but a practical implementation is due to Vigna
+
+        Sebastiano Vigna. 2008. Broadword implementation of rank/select queries.
+        In Proceedings of the 7th International Workshop on Experimental
+        and Efficient Algorithms (WEA). Springer, 154–168.
+
+    The bitvector B is split into blocks of 512 bits.
+    A first level stores the cumulative sum of the population count of each
+    block. Each cumulative sum is stored in a 64-bit integer, hence the
+    redundancy of the first level is 64/512 = 1/8, or 12.5%.
+    A second level stores the cumulative sum of the population count of each
+    64-bit word within a block. To answer a rank(i) query, we need to know the
+    cumulative population count "to the left" of the index i, hence we
+    just need to keep the cumulative counts for 512/64-1=7 blocks (the cumulative
+    count to the left of the first block is always 0). Now, the maximum
+    cumulative sum is clearly 64*7=448 which fits into 9 bits, thus we
+    can represent the array of 7 cumulative counts using just 7*9 = 63 bits,
+    i.e. with a single 64-bit integer. The redundancy of the second level
+    is then 64/512 = 1/8 bits. The two levels are stored interleaved in a
+    single array of 64-bit integers.
+
+    Summing up the redundancy of the two levels, the total redundancy is
+    therefore 1/4 bits for each of the original bits of B, or 25%.
+
+    A rank query is aswered in O(1) by accessing two population
+    counts and calculating one in a 64-bit word.
+*/
+
 struct rank9 {
     rank9() {}
 
