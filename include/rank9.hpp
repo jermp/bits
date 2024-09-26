@@ -18,7 +18,7 @@ namespace bits {
 
         Sebastiano Vigna. 2008. Broadword implementation of rank/select queries.
         In Proceedings of the 7th International Workshop on Experimental
-        and Efficient Algorithms (WEA). Springer, 154–168.
+        and Efficient Algorithms (WEA). Springer, pages 154–168.
 
     The bitvector B is split into blocks of 512 bits.
     A first level stores the cumulative sum of the population count of each

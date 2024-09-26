@@ -5,6 +5,42 @@
 
 namespace bits {
 
+/*
+    The following class implements an index on top of an uncompressed
+    bitvector B[0..n) to support select queries.
+
+    The solution implemented here is described in
+
+        Okanohara, Daisuke, and Kunihiko Sadakane. 2007.
+        Practical entropy-compressed rank/select dictionary.
+        In Proceedings of the 9-th Workshop on Algorithm Engineering
+        and Experiments (ALENEX), pages 60-70.
+
+    under the name "darray" (short for "dense" array).
+
+    The bitvector is split into variable-length super-blocks, each
+    containing L ones (except for, possibly, the last super-block).
+    A super-block is said to be "sparse" if its length is >= L2;
+    otherwise it is said "dense". Sparse super-blocks are represented
+    verbatim, i.e., the positions of the L ones are coded using 64-bit
+    integers. A dense super-block, instead, is sparsified: we keep
+    one position every L3 positions. The positions are coded relatively
+    to the beginning of each super-block, hence using log2(L2) bits per
+    position.
+
+    A select query first checks if the super-block is sparse: if it is,
+    then the query is solved in O(1). If the super-block is dense instead,
+    the corresponding block is accessed and a linear scan is performed
+    for a worst-case cost of O(L2/L3).
+
+    This implementation uses:
+
+    L =  1,024
+    L2 = 65,536 (so that each position in a dense block can be coded
+                 using 16-bit integers)
+    L3 = 32
+*/
+
 template <typename WordGetter>
 struct darray {
     darray() : m_positions(0) {}
@@ -104,9 +140,8 @@ struct darray {
     }
 
 protected:
-    static const uint64_t block_size = 1024;  // 2048
+    static const uint64_t block_size = 1024;
     static const uint64_t subblock_size = 32;
-    static const uint64_t max_in_block_distance = 1 << 16;
 
     uint64_t m_positions;
     std::vector<int64_t> m_block_inventory;
@@ -125,13 +160,15 @@ protected:
                                 std::vector<int64_t>& block_inventory,
                                 std::vector<uint16_t>& subblock_inventory,
                                 std::vector<uint64_t>& overflow_positions) {
-        if (cur_block_positions.back() - cur_block_positions.front() < max_in_block_distance) {
+        if (cur_block_positions.back() - cur_block_positions.front() < (1ULL << 16))  // dense case
+        {
             block_inventory.push_back(int64_t(cur_block_positions.front()));
             for (uint64_t i = 0; i < cur_block_positions.size(); i += subblock_size) {
                 subblock_inventory.push_back(
                     uint16_t(cur_block_positions[i] - cur_block_positions.front()));
             }
-        } else {
+        } else  // sparse case
+        {
             block_inventory.push_back(-int64_t(overflow_positions.size()) - 1);
             for (uint64_t i = 0; i < cur_block_positions.size(); ++i) {
                 overflow_positions.push_back(cur_block_positions[i]);
