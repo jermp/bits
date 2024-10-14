@@ -201,6 +201,9 @@ struct bit_vector  //
             fill_buf();
         }
 
+        /*
+            Return the bit at current position.
+        */
         bool operator*() const {
             uint64_t word = m_pos >> 6;
             uint64_t pos_in_word = m_pos & 63;

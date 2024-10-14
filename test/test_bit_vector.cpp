@@ -25,6 +25,33 @@ TEST_CASE("bit_vector::builder::get_bits") {
     std::cout << "EVERYTHING OK!" << std::endl;
 }
 
+TEST_CASE("bit_vector::iterator::operator*") {
+    const uint64_t max_int = test::get_random_uint();
+    std::cout << "max_int = " << max_int << std::endl;
+    constexpr bool all_distinct = true;
+    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length, max_int, all_distinct);
+    const uint64_t num_bits = seq.back();
+    bit_vector::builder bv_builder(num_bits + 1);
+    for (auto pos : seq) bv_builder.set(pos);
+    bit_vector bv;
+    bv_builder.build(bv);
+    std::cout << "checking correctness of bit_vector::iterator::operator*..." << std::endl;
+    bit_vector::iterator it = bv.get_iterator_at(0);
+    uint64_t i = 0;
+    for (auto pos : seq) {
+        while (i != pos) {
+            REQUIRE_MESSAGE(*it == false, "required false but got " << *it);
+            ++i;
+            ++it;
+        }
+        assert(i == pos);
+        REQUIRE_MESSAGE(*it == true, "required true but got " << *it);
+        ++i;
+        ++it;
+    }
+    std::cout << "EVERYTHING OK!" << std::endl;
+}
+
 TEST_CASE("bit_vector::iterator::take") {
     const uint64_t max_int = test::get_random_uint();
     std::cout << "max_int = " << max_int << std::endl;
