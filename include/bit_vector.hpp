@@ -202,9 +202,9 @@ struct bit_vector  //
         }
 
         bool operator*() const {
-            assert(m_pos < bv->num_bits());
             uint64_t word = m_pos >> 6;
             uint64_t pos_in_word = m_pos & 63;
+            assert(word < m_num_64bit_words);
             return m_data[word] >> pos_in_word & uint64_t(1);
         }
 
