@@ -201,6 +201,15 @@ struct bit_vector  //
             fill_buf();
         }
 
+        bool operator*() const {
+            assert(m_pos < bv->num_bits());
+            uint64_t word = m_pos >> 6;
+            uint64_t pos_in_word = m_pos & 63;
+            return m_data[word] >> pos_in_word & uint64_t(1);
+        }
+
+        void operator++() { m_pos++; }
+
         /*
             Return the next l bits from the current position and advance by l bits.
         */
