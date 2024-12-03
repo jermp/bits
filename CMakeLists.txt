@@ -10,11 +10,7 @@ if (NOT TARGET BITS)
   add_library(BITS INTERFACE)
   target_include_directories(BITS INTERFACE .)
   target_include_directories(BITS INTERFACE ./include)
-
   target_compile_features(BITS INTERFACE cxx_std_17)
-  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    target_compile_options(BITS INTERFACE -stdlib=libc++)
-  endif()
 
   MESSAGE(STATUS "Compiling for processor: " ${CMAKE_HOST_SYSTEM_PROCESSOR})
 
@@ -25,8 +21,6 @@ if (NOT TARGET BITS)
   endif()
 
   if (UNIX)
-    MESSAGE(STATUS "Compiling with flags: -std=c++17 -ggdb -Wall -Wextra -Wno-missing-braces -Wno-unknown-attributes -Wno-unused-function")
-
     target_compile_options(BITS INTERFACE -ggdb)
     target_compile_options(BITS INTERFACE -Wall -Wextra -Wno-missing-braces -Wno-unknown-attributes -Wno-unused-function)
 
