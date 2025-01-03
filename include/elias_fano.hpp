@@ -12,7 +12,10 @@ template <  //
     /* build a succinct select index on the zeros of high_bits for efficient next_neq */
     bool index_zeros = false,  //
     /* if encode_prefix_sum = false, the sequence is assumed to be sorted */
-    bool encode_prefix_sum = false  //
+    bool encode_prefix_sum = false,  //
+
+    typename DArray1 = darray1,  //
+    typename DArray0 = darray0   //
     >
 struct elias_fano {
     elias_fano() : m_back(0) {}
@@ -299,8 +302,8 @@ struct elias_fano {
 private:
     uint64_t m_back;
     bit_vector m_high_bits;
-    darray1 m_high_bits_d1;
-    darray0 m_high_bits_d0;
+    DArray1 m_high_bits_d1;
+    DArray0 m_high_bits_d0;
     compact_vector m_low_bits;
 
     template <typename Visitor, typename T>

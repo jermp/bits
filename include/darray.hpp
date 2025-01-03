@@ -33,15 +33,19 @@ namespace bits {
     the corresponding block is accessed and a linear scan is performed
     for a worst-case cost of O(L2/L3).
 
-    This implementation uses:
+    This implementation uses, by default:
 
-    L =  1,024
+    L =  1,024 (block_size)
     L2 = 65,536 (so that each position in a dense block can be coded
                  using 16-bit integers)
-    L3 = 32
+    L3 = 32 (subblock_size)
 */
 
-template <typename WordGetter>
+template <                       //
+    typename WordGetter,         //
+    uint64_t block_size = 1024,  //
+    uint64_t subblock_size = 32  //
+    >
 struct darray {
     darray() : m_positions(0) {}
 
@@ -140,9 +144,6 @@ struct darray {
     }
 
 protected:
-    static const uint64_t block_size = 1024;
-    static const uint64_t subblock_size = 32;
-
     uint64_t m_positions;
     std::vector<int64_t> m_block_inventory;
     std::vector<uint16_t> m_subblock_inventory;
