@@ -128,3 +128,26 @@ TEST_CASE("save_load_and_swap") {
     }
     std::cout << "EVERYTHING OK!" << std::endl;
 }
+
+TEST_CASE("shrink") {
+    compact_vector::builder builder_test(sequence_length, 32);
+    compact_vector::builder builder_check(sequence_length, 32);
+    compact_vector test;
+    compact_vector check;
+    for (uint64_t i = 0; i < sequence_length; ++i) {
+        uint64_t val = test::get_random_uint() % (1 << 20);
+        builder_test.set(i, val);
+        builder_check.set(i, val);
+    }
+    builder_check.build(check);
+    builder_test.shrink(10);
+    builder_test.build(test);
+    REQUIRE(test.size() == check.size());
+    for (uint64_t i = 0; i != sequence_length; ++i) {
+        uint64_t got = test[i];  
+        uint64_t expected = check[i];
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
+                                                << sequence_length << " but expected " << expected);
+    }
+    std::cout << "EVERYTHING OK!" << std::endl;
+}
