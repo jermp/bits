@@ -134,29 +134,25 @@ struct compact_vector  //
             }
         }
 
-        void shrink(uint64_t n) {
-            assert (n < m_width);
+        void reduce_width_by(uint64_t n) {
+            assert(m_width > n);
 
-            uint64_t old_m_width = m_width;
+            const uint64_t old_width = m_width;
+            const uint64_t old_mask = m_mask;
             m_width -= n;
-            uint64_t old_m_mask = m_mask;
             m_mask = -(m_width == 64) | ((uint64_t(1) << m_width) - 1);
 
-            uint64_t pos;
-            uint64_t block;
-            uint64_t shift;
-            uint64_t elem;
-
-            for (uint64_t i = 0; i < m_size; ++i) {
-                pos = i * old_m_width;
-                block = pos >> 6;
-                shift = pos & 63;
-                elem =  
-                    shift + old_m_width <= 64
-                        ? m_data[block] >> shift & old_m_mask
-                        : (m_data[block] >> shift) | (m_data[block + 1] << (64 - shift) & old_m_mask);
-                elem &= m_mask;
-                set(i, elem);
+            for (uint64_t i = 0, pos = 0; i < m_size; ++i, pos += old_width) {
+                // Note: this loop could be optimized,
+                // because we access consecutive elements
+                uint64_t block = pos >> 6;
+                uint64_t shift = pos & 63;
+                uint64_t old_elem =
+                    shift + old_width <= 64
+                        ? m_data[block] >> shift & old_mask
+                        : (m_data[block] >> shift) | (m_data[block + 1] << (64 - shift) & old_mask);
+                uint64_t new_elem = old_elem & m_mask;
+                set(i, new_elem);
             }
 
             m_data.resize(essentials::words_for(m_size * m_width) + 1, 0);
