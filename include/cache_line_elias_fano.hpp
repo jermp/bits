@@ -84,12 +84,9 @@ struct cache_line_elias_fano {
             uint64_t high_v = (v >> 8) - lower_bound_high_part + pos_in_block;
             uint64_t low_v = v & 255;
             uint64_t word = high_v >> 6;
-            if (word >= 2) {
-                throw std::runtime_error("max. gap between consecutive elements must be 500");
-            }
+            if (word >= 2) throw std::runtime_error("the high part must fit within 128 bits");
             uint64_t pos_in_word = high_v & 63;
             uint64_t* W = reinterpret_cast<uint64_t*>(high) + word;
-            *W &= ~(uint64_t(1) << pos_in_word);
             *W |= uint64_t(1) << pos_in_word;
             *(low + pos_in_block) = low_v;
 
