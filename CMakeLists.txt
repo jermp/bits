@@ -35,7 +35,7 @@ if (NOT TARGET BITS)
 
 endif()
 
-# Only add benchmarks and tests when compiling BITS itself, not when added as a dependency
+# Only add tests when compiling BITS itself, not when added as a dependency
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   enable_testing()
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -46,4 +46,16 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_test(${TEST_SRC_NAME} ${TEST_SRC_NAME})
     target_link_libraries(${TEST_SRC_NAME} PRIVATE BITS)
   endforeach(TEST_SRC)
+endif()
+
+# Only add benchmarks when compiling BITS itself, not when added as a dependency
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+  file(GLOB PERF_SOURCES perf/perf_*.cpp)
+  foreach(PERF_SRC ${PERF_SOURCES})
+    get_filename_component (PERF_SRC_NAME ${PERF_SRC} NAME_WE) # without extension
+    add_executable(${PERF_SRC_NAME} ${PERF_SRC})
+    add_test(${PERF_SRC_NAME} ${PERF_SRC_NAME})
+    target_link_libraries(${PERF_SRC_NAME} PRIVATE BITS)
+  endforeach(PERF_SRC)
 endif()
