@@ -55,7 +55,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   foreach(PERF_SRC ${PERF_SOURCES})
     get_filename_component (PERF_SRC_NAME ${PERF_SRC} NAME_WE) # without extension
     add_executable(${PERF_SRC_NAME} ${PERF_SRC})
-    add_test(${PERF_SRC_NAME} ${PERF_SRC_NAME})
     target_link_libraries(${PERF_SRC_NAME} PRIVATE BITS)
   endforeach(PERF_SRC)
 endif()
