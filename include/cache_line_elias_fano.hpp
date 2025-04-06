@@ -30,7 +30,7 @@ namespace bits {
 
 */
 struct cache_line_elias_fano {
-    cache_line_elias_fano() : m_back(0) {}
+    cache_line_elias_fano() : m_back(0), m_size(0) {}
 
     template <typename Iterator>
     void encode(Iterator begin, uint64_t n, uint64_t universe = uint64_t(-1)) {
