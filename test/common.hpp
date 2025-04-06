@@ -54,6 +54,18 @@ std::vector<uint64_t> get_sorted_sequence(const uint64_t sequence_length,       
     return seq;
 }
 
+std::vector<uint64_t> get_uniform_sorted_sequence(
+    const uint64_t sequence_length, const uint64_t universe,
+    const uint64_t seed = essentials::get_random_seed())  //
+{
+    essentials::uniform_int_rng<uint64_t> distr(0, universe - 1, seed);
+    std::vector<uint64_t> seq(sequence_length);
+    std::generate(seq.begin(), seq.end(), [&]() { return distr.gen(); });
+    assert(seq.size() == sequence_length);
+    std::sort(seq.begin(), seq.end());
+    return seq;
+}
+
 uint64_t get_random_uint(const uint64_t max_int = 1000,
                          const uint64_t seed = essentials::get_random_seed())  //
 {

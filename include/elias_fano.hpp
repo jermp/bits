@@ -184,6 +184,7 @@ struct elias_fano {
         uint64_t h2 = m_high_bits.get_iterator_at(pos + 1).next() - i - 1;
         uint64_t val1 = (h1 << l) | low1;
         uint64_t val2 = (h2 << l) | low2;
+        assert(val2 >= val1);
         return val2 - val1;
     }
 
