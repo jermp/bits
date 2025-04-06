@@ -14,10 +14,10 @@ namespace bits::test {
 /*
     Generate [sequence_length] random integers, distributed as a poisson RV with a random mean.
 */
-std::vector<uint64_t> get_sequence(const uint64_t sequence_length,  //
-                                   const uint64_t max_int = 1000)   //
+std::vector<uint64_t> get_sequence(const uint64_t sequence_length,                       //
+                                   const uint64_t max_int = 1000,                        //
+                                   const uint64_t seed = essentials::get_random_seed())  //
 {
-    uint64_t seed = essentials::get_random_seed();
     srand(seed);
     double mean = rand() % (max_int + 1);
     std::mt19937 rng(seed);
@@ -32,11 +32,11 @@ std::vector<uint64_t> get_sequence(const uint64_t sequence_length,  //
     Generate a sorted sequence of [sequence_length] random integers,
     distributed as a poisson RV with a random mean.
 */
-std::vector<uint64_t> get_sorted_sequence(const uint64_t sequence_length,   //
-                                          const uint64_t max_int = 1000,    //
-                                          const bool all_distinct = false)  //
+std::vector<uint64_t> get_sorted_sequence(const uint64_t sequence_length,                       //
+                                          const uint64_t max_int = 1000,                        //
+                                          const bool all_distinct = false,                      //
+                                          const uint64_t seed = essentials::get_random_seed())  //
 {
-    uint64_t seed = essentials::get_random_seed();
     srand(seed);
     double mean = rand() % (max_int + 1);
     std::mt19937 rng(seed);
@@ -54,10 +54,23 @@ std::vector<uint64_t> get_sorted_sequence(const uint64_t sequence_length,   //
     return seq;
 }
 
-uint64_t get_random_uint(const uint64_t max_int = 1000) {
-    uint64_t seed = essentials::get_random_seed();
+uint64_t get_random_uint(const uint64_t max_int = 1000,
+                         const uint64_t seed = essentials::get_random_seed())  //
+{
     srand(seed);
     return rand() % max_int + 1;  // at least 1
+}
+
+template <typename T>
+void print(std::vector<T> const& v) {
+    std::cout << '[';
+    for (uint64_t i = 0; i != v.size(); ++i) {
+        auto const& x = v[i];
+        std::cout << x;
+        if (i != v.size() - 1) std::cout << ',';
+    }
+    std::cout << ']';
+    std::cout << std::endl;
 }
 
 }  // namespace bits::test
