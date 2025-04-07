@@ -28,15 +28,17 @@ void perf_func(std::string const& op,                                 //
     ss_avg_ns_per_query << "\"avg_ns_per_query\":[";
     ss_sequence_lengths << "\"sequence_lengths\":[";
 
-    for (uint64_t log2_sequence_length = perf::min_log2_sequence_length;
-         log2_sequence_length <= perf::max_log2_sequence_length; ++log2_sequence_length)  //
+    const uint64_t num_points = sizeof(perf::sequence_lengths) / sizeof(perf::sequence_lengths[0]);
+    assert(num_points > 0);
+
+    for (uint64_t i = 0; i != num_points; ++i)  //
     {
-        uint64_t sequence_length = 1ULL << log2_sequence_length;
+        const uint64_t sequence_length = perf::sequence_lengths[i];
         assert(sequence_length > 0);
         std::vector<uint64_t> seq = test::get_uniform_sorted_sequence(
             sequence_length, avg_gap_seq * sequence_length, perf::seed);
         // test::print(seq);
-        uint64_t num_queries = std::max<uint64_t>(0.1 * sequence_length, 1000);
+        uint64_t num_queries = std::max<uint64_t>(0.1 * sequence_length, 100000);
         std::vector<uint64_t> queries =
             perf::get_queries(num_queries, avg_gap_query * sequence_length, perf::seed);
         // test::print(queries);
@@ -52,12 +54,12 @@ void perf_func(std::string const& op,                                 //
         t.stop();
         double avg_ns_per_query = t.elapsed() / (perf::num_runs * num_queries) * 1000.0;
         std::cout << "  total elapsed time = " << t.elapsed() << std::endl;
-        std::cout << "  EF(n=" << sequence_length << ") next_geq = " << avg_ns_per_query
+        std::cout << "  EF(n=" << sequence_length << ") " << op << " = " << avg_ns_per_query
                   << " [ns/query]" << std::endl;
 
         ss_sequence_lengths << sequence_length;
         ss_avg_ns_per_query << avg_ns_per_query;
-        if (log2_sequence_length != perf::max_log2_sequence_length) {
+        if (i != num_points - 1) {
             ss_avg_ns_per_query << ',';
             ss_sequence_lengths << ',';
         }
