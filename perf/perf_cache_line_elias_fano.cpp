@@ -11,7 +11,7 @@ cache_line_elias_fano encode_with_cache_line_elias_fano(std::vector<uint64_t> co
     return ef;
 }
 
-TEST_CASE("access") {
+TEST_CASE("access_dense") {
     essentials::timer_type t;
 
     std::stringstream ss_avg_ns_per_query;
@@ -24,9 +24,8 @@ TEST_CASE("access") {
     {
         uint64_t sequence_length = 1ULL << log2_sequence_length;
         assert(sequence_length > 0);
-        constexpr bool all_distinct = false;
         std::vector<uint64_t> seq =
-            test::get_sorted_sequence(sequence_length, 300, all_distinct, perf::seed);
+            test::get_uniform_sorted_sequence(sequence_length, 3.0 * sequence_length, perf::seed);
         // test::print(seq);
         uint64_t num_queries = std::max<uint64_t>(0.1 * sequence_length, 1000);
         std::vector<uint64_t> queries = perf::get_queries(num_queries, sequence_length, perf::seed);
@@ -35,15 +34,15 @@ TEST_CASE("access") {
         auto ef = encode_with_cache_line_elias_fano(seq);
         t.start();
         for (int run = 0; run != perf::num_runs; ++run) {
-            for (auto i : queries) {
-                uint64_t val = ef.access(i);
+            for (auto x : queries) {
+                uint64_t val = ef.access(x);
                 essentials::do_not_optimize_away(val);
             }
         }
         t.stop();
         double avg_ns_per_query = t.elapsed() / (perf::num_runs * num_queries) * 1000.0;
         std::cout << "  total elapsed time = " << t.elapsed() << std::endl;
-        std::cout << "  CLEF(n=" << sequence_length << ") random access = " << avg_ns_per_query
+        std::cout << "  EF(n=" << sequence_length << ") next_geq = " << avg_ns_per_query
                   << " [ns/query]" << std::endl;
 
         ss_sequence_lengths << sequence_length;

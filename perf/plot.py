@@ -20,12 +20,25 @@ with open(json_file, 'r') as f:
             datasets.append(json.loads(line))
 
 num_plots = len(datasets)
-cols = 2 # ceil(sqrt(num_plots))
+cols = 2  # Fixed to two plots per row
 rows = ceil(num_plots / cols)
 
 # Set up subplots
 fig, axs = plt.subplots(rows, cols, figsize=(cols * 6, rows * 4))
 axs = axs.flatten()
+
+# Determine global y-axis limits for each row
+y_limits_per_row = []
+for r in range(rows):
+    y_vals = []
+    for c in range(cols):
+        i = r * cols + c
+        if i < num_plots:
+            y_vals.extend(datasets[i]["avg_ns_per_query"])
+    if y_vals:
+        y_min = min(y_vals)
+        y_max = max(y_vals)
+        y_limits_per_row.append((y_min-1, y_max+1))
 
 # Helper function for powers of 2 labels
 def format_as_power_of_two(x):
@@ -45,6 +58,10 @@ for i, data in enumerate(datasets):
     ax.grid(True, which="both", linestyle='--', linewidth=0.5)
     ax.set_xticks(x)
     ax.set_xticklabels([format_as_power_of_two(val) for val in x], rotation=0)
+
+    # Set shared y-axis limits for this row
+    row = i // cols
+    ax.set_ylim(*y_limits_per_row[row])
 
 # Hide any unused subplots
 for j in range(i + 1, len(axs)):
