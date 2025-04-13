@@ -73,6 +73,32 @@ uint64_t get_random_uint(const uint64_t max_int = 1000,
     return rand() % max_int + 1;  // at least 1
 }
 
+std::vector<uint64_t> get_skewed_sequence(const uint64_t sequence_length,
+                                          const uint64_t max_small_value,
+                                          const uint64_t max_large_value,
+                                          const double skew_factor,  // 0 <= skew_factor <= 1
+                                          const uint64_t seed = essentials::get_random_seed())  //
+{
+    std::vector<uint64_t> seq;
+    seq.reserve(sequence_length);
+
+    std::mt19937 gen(seed);
+    std::uniform_int_distribution<uint64_t> small_value_dist(0, max_small_value - 1);
+    std::uniform_int_distribution<uint64_t> large_value_dist(max_small_value, max_large_value - 1);
+    std::uniform_real_distribution<float> float_dist(0.0f, 1.0f);
+
+    for (uint64_t i = 0; i != sequence_length; ++i) {
+        float r = float_dist(gen);
+        if (r < skew_factor) {
+            seq.push_back(small_value_dist(gen));
+        } else {
+            seq.push_back(large_value_dist(gen));
+        }
+    }
+
+    return seq;
+}
+
 template <typename T>
 void print(std::vector<T> const& v) {
     std::cout << '[';

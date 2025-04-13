@@ -28,6 +28,12 @@ if (NOT TARGET BITS)
       MESSAGE(STATUS "Using sanitizers. Compiling with flags: -fsanitize=address -fno-omit-frame-pointer")
       target_compile_options(BITS INTERFACE -fsanitize=address -fno-omit-frame-pointer)
     endif()
+
+    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    MESSAGE(STATUS "Compiling with flags: -O0")
+      target_compile_options(BITS INTERFACE -O0)
+    endif()
+
   endif()
 
   add_subdirectory(external/essentials)

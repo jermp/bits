@@ -160,7 +160,8 @@ protected:
     static void flush_cur_block(std::vector<uint64_t>& cur_block_positions,
                                 std::vector<int64_t>& block_inventory,
                                 std::vector<uint16_t>& subblock_inventory,
-                                std::vector<uint64_t>& overflow_positions) {
+                                std::vector<uint64_t>& overflow_positions)  //
+    {
         if (cur_block_positions.back() - cur_block_positions.front() < (1ULL << 16))  // dense case
         {
             block_inventory.push_back(int64_t(cur_block_positions.front()));
