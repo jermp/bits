@@ -13,14 +13,7 @@ std::pair<std::vector<uint64_t>, std::vector<uint64_t>> compute_ranks_and_dictio
 {
     // compute frequencies
     std::unordered_map<uint64_t, uint64_t> distinct;
-    for (auto it = begin, end = begin + n; it != end; ++it) {
-        auto find_it = distinct.find(*it);
-        if (find_it != distinct.end()) {  // found
-            (*find_it).second += 1;
-        } else {
-            distinct[*it] = 1;
-        }
-    }
+    for (auto it = begin, end = begin + n; it != end; ++it) distinct[*it] += 1;
 
     std::vector<std::pair<uint64_t, uint64_t>> vec;
     vec.reserve(distinct.size());
