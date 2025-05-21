@@ -86,7 +86,7 @@ struct compact_vector  //
     struct builder {
         builder() : m_size(0), m_width(0), m_mask(0), m_back(0), m_cur_block(0), m_cur_shift(0) {}
 
-        builder(uint64_t n, uint64_t w) { resize(n, w); }
+        builder(uint64_t n, uint64_t w) : builder() { resize(n, w); }
 
         /*
             Resize the container to hold n values, each of width w.
@@ -96,6 +96,8 @@ struct compact_vector  //
             m_width = w;
             m_mask = -(w == 64) | ((uint64_t(1) << w) - 1);
             m_back = 0;
+            m_cur_block = 0;
+            m_cur_shift = 0;
             m_data.resize(
                 /* use 1 word more for safe access() */
                 essentials::words_for(m_size * m_width) + 1, 0);
@@ -109,7 +111,9 @@ struct compact_vector  //
         template <typename Iterator>
         void fill(Iterator begin, uint64_t n) {
             if (m_width == 0) throw std::runtime_error("width must be > 0");
-            for (uint64_t i = 0; i != n; ++i, ++begin) set(i, *begin);
+            for (uint64_t i = 0; i != n; ++i, ++begin) {
+                set(i, *begin);  // can just do push_back(*begin);
+            }
         }
 
         /*
@@ -131,6 +135,28 @@ struct compact_vector  //
             if (res_shift < m_width) {
                 m_data[block + 1] &= ~(m_mask >> res_shift);
                 m_data[block + 1] |= v >> res_shift;
+            }
+        }
+
+        void push_back(uint64_t v) {
+            assert(m_width != 0);
+            m_back = v;
+            m_data[m_cur_block] &= ~(m_mask << m_cur_shift);
+            m_data[m_cur_block] |= v << m_cur_shift;
+
+            uint64_t res_shift = 64 - m_cur_shift;
+            if (res_shift < m_width) {
+                ++m_cur_block;
+                m_data[m_cur_block] &= ~(m_mask >> res_shift);
+                m_data[m_cur_block] |= v >> res_shift;
+                m_cur_shift = -res_shift;
+            }
+
+            m_cur_shift += m_width;
+
+            if (m_cur_shift == 64) {
+                m_cur_shift = 0;
+                ++m_cur_block;
             }
         }
 

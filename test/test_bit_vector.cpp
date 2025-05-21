@@ -52,6 +52,35 @@ TEST_CASE("bit_vector::iterator::operator*") {
     std::cout << "EVERYTHING OK!" << std::endl;
 }
 
+TEST_CASE("bit_vector::iterator::skip_to") {
+    const uint64_t max_int = test::get_random_uint();
+    std::cout << "max_int = " << max_int << std::endl;
+    constexpr bool all_distinct = true;
+    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length, max_int, all_distinct);
+    const uint64_t num_bits = seq.back();
+    bit_vector::builder bv_builder(num_bits + 1);
+    std::vector<bool> vec_bools(num_bits + 1, false);
+    for (auto pos : seq) {
+        bv_builder.set(pos);
+        vec_bools[pos] = true;
+    }
+    bit_vector bv;
+    bv_builder.build(bv);
+    std::cout << "checking correctness of bit_vector::iterator::skip_to..." << std::endl;
+    bit_vector::iterator it = bv.begin();
+
+    srand(essentials::get_random_seed());
+    for (int i = 0; i != 5; ++i) {
+        uint64_t pos = rand() % num_bits;
+        it.skip_to(pos);
+        for (uint64_t j = pos; j != num_bits; ++j, ++it) {
+            REQUIRE_MESSAGE(*it == vec_bools[j], "required " << vec_bools[j] << " but got " << *it);
+        }
+    }
+
+    std::cout << "EVERYTHING OK!" << std::endl;
+}
+
 TEST_CASE("bit_vector::iterator::take") {
     const uint64_t max_int = test::get_random_uint();
     std::cout << "max_int = " << max_int << std::endl;

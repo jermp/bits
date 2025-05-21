@@ -143,6 +143,8 @@ struct bit_vector  //
         }
 
         uint64_t num_bits() const { return m_num_bits; }
+
+        std::vector<uint64_t>& data() { return m_data; }
         std::vector<uint64_t> const& data() const { return m_data; }
 
     private:
@@ -192,12 +194,25 @@ struct bit_vector  //
     struct iterator {
         iterator() : m_data(nullptr), m_num_64bit_words(0), m_pos(0), m_buf(0), m_avail(0) {}
 
+        iterator(uint64_t const* data, uint64_t num_64bit_words, uint64_t pos = 0)
+            : m_data(data)                        //
+            , m_num_64bit_words(num_64bit_words)  //
+            , m_pos(pos)                          //
+        {
+            skip_to(m_pos);
+        }
+
         iterator(bit_vector const* bv, uint64_t pos = 0)
             : m_data((bv->data()).data())             //
             , m_num_64bit_words((bv->data()).size())  //
             , m_pos(pos)                              //
         {
-            assert(m_pos < bv->num_bits());
+            skip_to(m_pos);
+        }
+
+        void skip_to(uint64_t pos) {
+            assert(pos < 64 * m_num_64bit_words);
+            m_pos = pos;
             fill_buf();
         }
 
