@@ -242,11 +242,6 @@ struct elias_fano {
 
         Return the tuple [lo_pos, lo, hi_pos, hi].
 
-        Return [position,value] of the rightmost largest element that is <= x.
-        Return [size()-1,back()] if x >= back().
-        Return [uint64(-1),uint64(-1)] if x < front() (result is undefined;
-        uint64(-1) = 2^64-1).
-
         Example.
 
         1, 3, 3, 4, 5, 6, 6, 9, 12, 14, 17, 17
