@@ -107,6 +107,20 @@ struct elias_fano {
             read_next_value();
         }
 
+        iterator(elias_fano const* ef, uint64_t pos, uint64_t high_hint)
+            : m_ef(ef)
+            , m_pos(pos)
+            , m_l(ef->m_low_bits.width())
+            , m_val(0)  //
+        {
+            if (!has_next() or m_ef->m_high_bits_d1.num_positions() == 0) return;
+            assert(m_l < 64);
+            assert(high_hint == 0 || m_ef->m_high_bits.get(high_hint) == 0);
+            m_high_bits_it = m_ef->m_high_bits.get_iterator_at(high_hint);
+            m_low_bits_it = m_ef->m_low_bits.get_iterator_at(m_pos);
+            read_next_value();
+        }
+
         bool has_next() const { return m_pos < m_ef->size(); }
         bool has_prev() const { return m_pos > 0; }
         uint64_t value() const { return m_val; }
@@ -125,7 +139,7 @@ struct elias_fano {
             assert(m_pos > 0);
             uint64_t pos = m_pos - 1;
             /*
-                Read_next_value() sets the state ahead of 1 position,
+                `read_next_value()` sets the state ahead of 1 position,
                 hence must go back by 2 to get previous value.
             */
             assert(m_high_bits_it.position() >= 2);
@@ -322,15 +336,27 @@ private:
         if (x > back()) return {{size() - 1, back()}, iterator()};
 
         uint64_t h_x = x >> m_low_bits.width();
-        uint64_t begin = h_x ? m_high_bits_d0.select(m_high_bits, h_x - 1) - h_x + 1 : 0;
+        uint64_t p = 0;
+        uint64_t begin = 0;
+        if (h_x > 0) {
+            p = m_high_bits_d0.select(m_high_bits, h_x - 1);
+            begin = p - h_x + 1;
+        }
         assert(begin < size());
+
+        /*
+            `begin` is the position of the elements that have high part >= h_x
+            and `p` is the position in `m_high_bits` of the (h_x-1)-th 0,
+            so it is passed to the iterator as a hint to recover the high part
+            of the element at position `begin` without doing a select_1.
+        */
 
         // uint64_t end = m_high_bits_d0.select(m_high_bits, h_x) - h_x;
         // assert(end <= size());
         // assert(begin <= end);
         // return binary search for x in [begin, end)
 
-        auto it = get_iterator_at(begin);
+        auto it = iterator(this, begin, p /* high hint */);
         uint64_t pos = begin;
         uint64_t val = it.value();
         while (val < x) {
