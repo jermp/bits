@@ -81,6 +81,7 @@ TEST_CASE("iterator::next") {
 TEST_CASE("next_geq") {
     std::vector<uint64_t> seq = get_sequence(sequence_length);
     auto es = encode(seq);
+    // test::print(seq);
 
     std::cout << "checking correctness of next_geq..." << std::endl;
 
@@ -111,6 +112,7 @@ TEST_CASE("next_geq") {
         uint64_t got = p.val;
 
         // std::cout << "x=" << x << "; pos=" << pos << "; got=" << got << std::endl;
+
         auto it = std::lower_bound(seq.begin(), seq.end(), x);
         assert(it != seq.end());
         uint64_t expected = *it;
@@ -124,6 +126,8 @@ TEST_CASE("next_geq") {
 }
 
 TEST_CASE("small_next_geq") {
+    std::cout << "checking correctness of next_geq over a small sequence..." << std::endl;
+
     std::vector<uint64_t> seq{0, 3, 5, 6, 9, 13, 23, 31};
     auto es = encode(seq);
 
@@ -179,6 +183,9 @@ TEST_CASE("locate") {
         uint64_t expected_hi_pos = i + 1;
         uint64_t expected_hi_val = seq[i + 1];
 
+        // std::cout << "x = " << x << " lo_pos = " << lo_pos << " lo_val = " << lo_val
+        //           << " hi_pos = " << hi_pos << " hi_val = " << hi_val << std::endl;
+
         bool good = (lo_val == expected_lo_val) && (lo_pos == expected_lo_pos);
         REQUIRE_MESSAGE(good, "got " << lo_val << " at position " << lo_pos << "/" << seq.size()
                                      << " but expected " << expected_lo_val << " at position "
@@ -202,6 +209,9 @@ TEST_CASE("locate") {
         uint64_t lo_val = p.first.val;
         uint64_t hi_pos = p.second.pos;
         uint64_t hi_val = p.second.val;
+
+        // std::cout << "x = " << x << " lo_pos = " << lo_pos << " lo_val = " << lo_val
+        //           << " hi_pos = " << hi_pos << " hi_val = " << hi_val << std::endl;
 
         auto it = std::upper_bound(seq.begin(), seq.end(), x) - 1;
         uint64_t expected_lo_pos = std::distance(seq.begin(), it);

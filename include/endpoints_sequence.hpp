@@ -35,7 +35,7 @@ namespace bits {
     The goal of this class is to support fast next_geq queries at the price
     of some space increase compared to an `elias_fano` sequence, so:
     - The low bits are always 8.
-    - We keep an array of H of size ceil(U/2^8)-1, where H[i] indicates the
+    - We keep an array of H of size ceil(U/2^8), where H[i] indicates the
       position of the i-th 0 in the high bit array. Each H[i] is written
       in 1+log(n) bits.
 */
@@ -52,7 +52,7 @@ struct endpoints_sequence {
         bit_vector::builder bvb_high_bits(num_high_bits);
         m_low_bits.reserve(n);
 
-        compact_vector::builder cv_builder((universe + 256 - 1) / 256 - 1,  // ceil(U/2^8)-1
+        compact_vector::builder cv_builder((universe + 256 - 1) / 256,  // ceil(U/2^8)
                                            util::ceil_log2_uint64(num_high_bits));
 
         assert(*begin == 0);
@@ -62,23 +62,21 @@ struct endpoints_sequence {
             m_low_bits.push_back(v & 255);
             uint64_t high_part = v >> 8;
             uint64_t pos = high_part + i;
-            // std::cout << "prev_pos = " << prev_pos << "; pos = " << pos << std::endl;
             bvb_high_bits.set(pos, 1);
-            for (uint64_t j = prev_pos + 1; j < pos; ++j) {
-                // std::cout << "j = " << j << std::endl;
-                cv_builder.push_back(j);
-            }
+            for (uint64_t j = prev_pos + 1; j < pos; ++j) cv_builder.push_back(j);
             prev_pos = pos;
             m_back = v;
         }
+        cv_builder.push_back(prev_pos + 1);
 
         bvb_high_bits.build(m_high_bits);
+        m_high_bits_d1.build(m_high_bits);
+        cv_builder.build(m_high_bits_d0);
+
         // for (uint64_t i = 0; i != m_high_bits.num_bits(); ++i) {
         //     std::cout << m_high_bits.get(i) << ' ';
         // }
         // std::cout << std::endl;
-        m_high_bits_d1.build(m_high_bits);
-        cv_builder.build(m_high_bits_d0);
         // auto it = m_high_bits_d0.begin();
         // for (uint64_t i = 0; i != m_high_bits_d0.size(); ++i) {
         //     std::cout << i << " : " << *it << '\n';
@@ -153,8 +151,142 @@ struct endpoints_sequence {
             uint64_t high = m_high_bits_it.next();
             assert(high == m_ptr->m_high_bits_d1.select(m_ptr->m_high_bits, m_pos));
             uint64_t low = *m_low_bits_it;
-            m_val = (((high - m_pos) << 8) | low);
+            m_val = ((high - m_pos) << 8) | low;
             ++m_low_bits_it;
+        }
+    };
+
+    /*
+        This version of iterator uses an iterator over the `low_bits`
+        and an iterator over `high_bits_d0`.
+        This is useful in next_geq and locate because only
+        these two sequences are accessed.
+        The class `iterator` accesses the `high_bits`, so when
+        used in `next_geq` and `locate`, we have accesses to three
+        sequences in total: `low_bits`, `high_bits`, and `high_bits_d0`.
+    */
+    struct _iterator {
+        _iterator() : m_ptr(nullptr), m_pos(0), m_val(0) {}
+
+        _iterator(endpoints_sequence const* ptr)
+            : m_ptr(ptr)
+            , m_pos(0)
+            , m_val(0)  //
+        {
+            m_high_part = 0;
+            m_high_bits_d0_it = m_ptr->m_high_bits_d0.get_iterator_at(0);
+            m_cur_pos = *m_high_bits_d0_it;
+            m_prev_pos = m_cur_pos;
+            m_cluster_size = m_cur_pos;
+            assert(m_cluster_size > 0);
+            m_pos_in_cluster = 0;
+            m_low_bits_it = m_ptr->m_low_bits.begin() + m_pos;
+            uint64_t low = *m_low_bits_it;
+            m_val = (m_high_part << 8) | low;
+        }
+
+        _iterator(endpoints_sequence const* ptr, uint64_t pos, uint64_t high_part)
+            : m_ptr(ptr)
+            , m_pos(pos)
+            , m_val(0)  //
+        {
+            m_high_part = high_part;
+            m_high_bits_d0_it = m_ptr->m_high_bits_d0.get_iterator_at(high_part);
+            m_prev_pos = *m_high_bits_d0_it;
+            m_cluster_size = 0;
+            m_pos_in_cluster = 0;
+
+            while (m_cluster_size == 0) {
+                m_high_part += 1;
+                ++m_high_bits_d0_it;
+                m_cur_pos = *m_high_bits_d0_it;
+                m_cluster_size = m_cur_pos - m_prev_pos - 1;
+                m_prev_pos = m_cur_pos;
+            }
+            m_low_bits_it = m_ptr->m_low_bits.begin() + m_pos;
+
+            uint64_t low = *m_low_bits_it;
+            m_val = (m_high_part << 8) | low;
+        }
+
+        bool has_next() const { return m_pos < m_ptr->size(); }
+        bool has_prev() const { return m_pos > 0; }
+        uint64_t value() const { return m_val; }
+        uint64_t position() const { return m_pos; }
+
+        void next() {
+            ++m_pos;
+            ++m_pos_in_cluster;
+            if (!has_next()) return;
+            read_next_value();
+        }
+
+        /*
+            Return the value before the current position.
+        */
+        uint64_t prev_value() {
+            assert(m_pos > 0);
+
+            uint64_t high_part_prev_val = m_high_part;
+
+            if (m_pos_in_cluster == 0) {
+                uint64_t cur_pos = m_cur_pos;
+                uint64_t prev_pos = m_cur_pos;
+                assert(m_cur_pos == *m_high_bits_d0_it);
+                uint64_t cluster_size = 0;
+
+                assert(m_high_bits_d0_it != m_ptr->m_high_bits_d0.begin());
+                high_part_prev_val -= 1;
+                --m_high_bits_d0_it;
+                cur_pos = *m_high_bits_d0_it;
+
+                while (cluster_size == 0 and high_part_prev_val > 0) {
+                    assert(m_high_bits_d0_it != m_ptr->m_high_bits_d0.begin());
+                    high_part_prev_val -= 1;
+                    --m_high_bits_d0_it;
+                    prev_pos = cur_pos;
+                    cur_pos = *m_high_bits_d0_it;
+                    cluster_size = prev_pos - cur_pos - 1;
+                }
+
+                if (cluster_size > 0 || high_part_prev_val > 0) high_part_prev_val += 1;
+            }
+
+            uint64_t low = *(m_low_bits_it - 1);
+            return (high_part_prev_val << 8) | low;
+        }
+
+    private:
+        endpoints_sequence const* m_ptr;
+        uint64_t m_pos;
+        uint64_t m_val;
+
+        uint64_t m_cur_pos, m_prev_pos;
+        uint64_t m_pos_in_cluster, m_cluster_size;
+        uint64_t m_high_part;
+
+        compact_vector::iterator m_high_bits_d0_it;
+        std::vector<uint8_t>::const_iterator m_low_bits_it;
+
+        void read_next_value() {
+            assert(m_pos < m_ptr->size());
+
+            if (m_pos_in_cluster == m_cluster_size) {
+                m_cluster_size = 0;
+                m_pos_in_cluster = 0;
+                while (m_cluster_size == 0) {
+                    m_high_part += 1;
+                    ++m_high_bits_d0_it;
+                    m_cur_pos = *m_high_bits_d0_it;
+                    m_cluster_size = m_cur_pos - m_prev_pos - 1;
+                    m_prev_pos = m_cur_pos;
+                }
+            }
+            assert(m_high_part + m_pos == m_ptr->m_high_bits_d1.select(m_ptr->m_high_bits, m_pos));
+
+            ++m_low_bits_it;
+            uint64_t low = *m_low_bits_it;
+            m_val = (m_high_part << 8) | low;
         }
     };
 
@@ -250,39 +382,59 @@ private:
         visitor.visit(t.m_low_bits);
     }
 
-    std::pair<return_value, iterator> _next_geq(const uint64_t x) const  //
+    std::pair<return_value, _iterator> _next_geq(const uint64_t x) const  //
     {
         assert(x >= 0);
         assert(x < back());
 
+        // uint64_t h_x = x >> 8;
+        // uint64_t p = 0;
+        // uint64_t begin = 0;
+        // if (h_x > 0) {
+        //     p = m_high_bits_d0.access(h_x - 1);
+        //     begin = p - h_x + 1;
+        // }
+        // assert(begin < size());
+
+        // /*
+        //     `begin` is the position of the elements that have high part >= h_x
+        //     and `p` is the position in `m_high_bits` of the (h_x-1)-th 0,
+        //     so it is passed to the iterator as a hint to recover the high part
+        //     of the element at position `begin` without doing a select_1.
+        // */
+
+        // auto it = iterator(this, begin, p /* high hint */);
+        // uint64_t pos = begin;
+        // uint64_t val = it.value();
+        // while (val < x) {
+        //     ++pos;
+        //     it.next();
+        //     val = it.value();
+        // }
+        // /* now pos is the position of the element that is >= x */
+        // assert(val >= x);
+        // assert(pos < size());
+        // assert(val == access(pos));
+        // assert(it.position() == pos);
+        // return {{pos, val}, it};
+
         uint64_t h_x = x >> 8;
-        uint64_t p = 0;
         uint64_t begin = 0;
+        _iterator it;
         if (h_x > 0) {
-            p = m_high_bits_d0.access(h_x - 1);
+            uint64_t p = m_high_bits_d0.access(h_x - 1);
             begin = p - h_x + 1;
+            it = _iterator(this, begin, h_x - 1);
+        } else {
+            it = _iterator(this);
         }
         assert(begin < size());
 
-        /*
-            `begin` is the position of the elements that have high part >= h_x
-            and `p` is the position in `m_high_bits` of the (h_x-1)-th 0,
-            so it is passed to the iterator as a hint to recover the high part
-            of the element at position `begin` without doing a select_1.
-        */
-
-        auto it = iterator(this, begin, p /* high hint */);
         uint64_t pos = begin;
         uint64_t val = it.value();
         while (val < x) {
             ++pos;
-            /*
-                Note: no need for bound checking here
-                because x <= back(), hence pos cannot
-                be equal to size().
-            */
-            it.next();
-            val = it.value();
+            val = (it.next(), it.value());
         }
         /* now pos is the position of the element that is >= x */
         assert(val >= x);
