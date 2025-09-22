@@ -32,6 +32,7 @@ static inline bool msbll(uint64_t x, uint64_t& ret) {
 }
 
 static inline uint64_t ceil_log2_uint32(uint32_t x) { return (x > 1) ? msb(x - 1) + 1 : 0; }
+static inline uint64_t ceil_log2_uint64(uint64_t x) { return (x > 1) ? msbll(x - 1) + 1 : 0; }
 
 /* return the position of the least significant bit (lsb) */
 static inline uint64_t lsb(uint32_t x) {

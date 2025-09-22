@@ -18,6 +18,7 @@ std::vector<uint64_t> get_sequence(const uint64_t sequence_length,              
                                    const uint64_t max_int = 1000,                        //
                                    const uint64_t seed = essentials::get_random_seed())  //
 {
+    std::cout << "seed = " << seed << std::endl;
     srand(seed);
     double mean = rand() % (max_int + 1);
     std::mt19937 rng(seed);

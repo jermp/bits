@@ -14,7 +14,7 @@ struct compact_vector  //
     struct enumerator {
         using iterator_category = std::random_access_iterator_tag;
 
-        enumerator() {}
+        enumerator() : m_i(0), m_cur_val(0), m_cur_block(0), m_cur_shift(0), m_vec(nullptr) {}
 
         enumerator(Vec const* vec, uint64_t i)
             : m_i(i)
