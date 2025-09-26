@@ -4,7 +4,7 @@
 #include <cmath>
 #include <iterator>
 
-#include "essentials.hpp"
+#include "../external/essentials/include/essentials.hpp"
 
 namespace bits {
 

@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <vector>
 
-#include "essentials.hpp"
+#include "../external/essentials/include/essentials.hpp"
 #include "util.hpp"
 
 namespace bits {
