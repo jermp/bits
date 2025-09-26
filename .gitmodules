@@ -4,3 +4,5 @@
 [submodule "external/doctest"]
 	path = external/doctest
 	url = https://github.com/doctest/doctest.git
+[submodule "external/bits"]
+	url = git@github.com:ggraham/bits.git
