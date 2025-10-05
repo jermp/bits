@@ -97,7 +97,7 @@ struct bit_vector  //
 
         void append_bits(uint64_t bits, uint64_t len) {
             // check there are no spurious bits
-            assert(len == 64 || (bits >> len) == 0);
+            assert(len >= 64 || (bits >> len) == 0);
             if (!len) return;
             uint64_t pos_in_word = m_num_bits & 63;
             m_num_bits += len;
