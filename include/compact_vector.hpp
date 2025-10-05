@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <cmath>
+#include <cstring>
 #include <iterator>
 
 #include "essentials.hpp"
@@ -253,7 +254,9 @@ struct compact_vector  //
         assert(i < size());
         uint64_t pos = i * m_width;
         const char* ptr = reinterpret_cast<const char*>(m_data.data());
-        return (*(reinterpret_cast<uint64_t const*>(ptr + (pos >> 3))) >> (pos & 7)) & m_mask;
+        uint64_t word;
+        std::memcpy(&word, ptr + (pos >> 3), sizeof(uint64_t));
+        return (word >> (pos & 7)) & m_mask;
     }
 
     uint64_t back() const { return operator[](size() - 1); }
