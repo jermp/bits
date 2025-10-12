@@ -28,7 +28,7 @@ struct compact_vector  //
             read();
         }
 
-        uint64_t operator*() { return m_cur_val; }
+        uint64_t operator*() const { return m_cur_val; }
 
         enumerator& operator++() {
             ++m_i;

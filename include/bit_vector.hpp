@@ -188,7 +188,7 @@ struct bit_vector  //
         uint64_t block = pos >> 6;
         uint64_t shift = pos & 63;
         uint64_t word = m_data[block] >> shift;
-        if (shift && block + 1 < m_data.size()) { word |= m_data[block + 1] << (64 - shift); }
+        if (shift && block + 1 < m_data.size()) word |= m_data[block + 1] << (64 - shift);
         return word;
     }
 
