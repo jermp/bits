@@ -247,7 +247,6 @@ private:
 
     std::pair<return_value, iterator> next_geq_helper(const uint64_t x) const  //
     {
-        assert(x >= 0);
         assert(x < back());
 
         uint64_t h_x = x >> 8;
