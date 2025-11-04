@@ -126,6 +126,7 @@ struct endpoints_sequence {
             if (!has_next()) return;
             read_next_value();
         }
+        void operator++() { next(); }
 
         /*
             Return the value before the current position.
