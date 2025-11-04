@@ -119,6 +119,7 @@ struct endpoints_sequence {
         bool has_next() const { return m_pos < m_ptr->size(); }
         bool has_prev() const { return m_pos > 0; }
         uint64_t value() const { return m_val; }
+        uint64_t operator*() const { return value(); }
         uint64_t position() const { return m_pos; }
 
         void next() {
