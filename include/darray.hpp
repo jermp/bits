@@ -18,20 +18,39 @@ namespace bits {
 
     under the name "darray" (short for "dense" array).
 
-    The bitvector is split into variable-length super-blocks, each
-    containing L ones (except for, possibly, the last super-block).
-    A super-block is said to be "sparse" if its length is >= L2;
-    otherwise it is said "dense". Sparse super-blocks are represented
+    The bitvector is split into variable-length blocks, each
+    containing L ones (except for, possibly, the last block).
+    A block is said to be "sparse" if its length is >= L2;
+    otherwise it is said "dense". Sparse blocks are represented
     verbatim, i.e., the positions of the L ones are coded using 64-bit
-    integers. A dense super-block, instead, is sparsified: we keep
+    integers. A dense block, instead, is sparsified: we keep
     one position every L3 positions. The positions are coded relatively
-    to the beginning of each super-block, hence using log2(L2) bits per
+    to the beginning of each block, hence using log2(L2) bits per
     position.
 
-    A select query first checks if the super-block is sparse: if it is,
-    then the query is solved in O(1). If the super-block is dense instead,
-    the corresponding block is accessed and a linear scan is performed
-    for a worst-case cost of O(L2/L3).
+    Let m be the number of bits set in B. The data structure stores:
+    - An array `block_inventory[0..m/L)` such that `block_inventory[i]`
+      holds the result of Select(iL) if block i is dense; it holds the start position
+      in `overflow_positions` of the 1-bit positions of the block i if it is sparse.
+      Its space is m/L*64 bits.
+    - An array `overflow_positions` holding the positions of the L ones
+      in sparse blocks. As we have at most m/L2 sparse blocks, its space is
+      m/L2*L*64 bits at most.
+    - An array `subblock_inventory[0..m/L3)` such that `subblock_inventory[i]`
+      holds the result of Select(iL3). Its space is m/L3*log2(L2) bits.
+
+    A Select(i) query first checks if the block i/L is sparse by accessing
+    `block_inventory[i/L]`: if it is, then the query is solved in O(1) as
+    `overflow_positions[block_inventory[i/L] + i%L]`; otherwise the corresponding
+    sub-block is accessed and a sequential scan of at most L2 bits is performed.
+    If p is the position computed during the scan, the final result is
+    `block_inventory[i/L] + subblock_inventory[i/L3] + p`.
+
+    If Scan(Q) = Q/B is the number of cache-misses involved in a sequential scan
+    of Q bits with a cache-line of B bits, it follows that the number of cache-misses
+    per Select(i) query are:
+        2, if position i belongs to a sparse block;
+        2 + Scan(L2), if i belongs to a dense block.
 
     This implementation uses, by default:
 
@@ -39,6 +58,18 @@ namespace bits {
     L2 = 65,536 (so that each position in a dense block can be coded
                  using 16-bit integers)
     L3 = 32 (subblock_size)
+
+    For these block sizes, we have a space usage of at most:
+    m/2^10*64 (block_inventory) +
+    m/2^16*2^10*64 + (sparse blocks) +
+    m/2^5*2^4 (dense blocks) =
+    25/16 m = 1.5625 m bits.
+
+    (When used to index the high bitvector of Elias-Fano, sparse blocks are rare;
+     so the space usage is likely close to 9/16 m.)
+
+    If 0.0 <= d = m/n <= 1.0 is the density of the bitvector, the index costs at most
+    25/16 dn extra bits, for a total of n(1+25/16d) bits.
 */
 
 template <                       //
@@ -85,6 +116,32 @@ struct darray {
         m_block_inventory.swap(block_inventory);
         m_subblock_inventory.swap(subblock_inventory);
         m_overflow_positions.swap(overflow_positions);
+
+        // {
+        //     std::cout << "num_blocks = " << m_block_inventory.size()
+        //               << " (expected = " << ((m_positions + block_size - 1) / block_size) << ")"
+        //               << std::endl;
+        //     std::cout << "num_subblocks = " << m_subblock_inventory.size()
+        //               << " (expected = " << ((m_positions + subblock_size - 1) / subblock_size)
+        //               << ")" << std::endl;
+
+        //     std::cout << "block_inventory: got "
+        //               << (essentials::vec_bytes(m_block_inventory) * 8.0 - 64) / m_positions
+        //               << " bits/bit (expected "
+        //               << ((m_positions + block_size - 1) / block_size * 64.0) / m_positions <<
+        //               ")"
+        //               << std::endl;
+
+        //     std::cout << "overflow_positions: got "
+        //               << (essentials::vec_bytes(m_overflow_positions) * 8.0 - 64) / m_positions
+        //               << " bits/bit (at most 1)" << std::endl;
+
+        //     std::cout << "subblock_inventory: got "
+        //               << (essentials::vec_bytes(m_subblock_inventory) * 8.0 - 16) / m_positions
+        //               << " bits/bit (expected "
+        //               << ((m_positions + subblock_size - 1) / subblock_size * 16.0) / m_positions
+        //               << ")" << std::endl;
+        // }
     }
 
     /*
@@ -95,7 +152,7 @@ struct darray {
         assert(i < num_positions());
         uint64_t block = i / block_size;
         int64_t block_pos = m_block_inventory[block];
-        if (block_pos < 0) {  // sparse super-block
+        if (block_pos < 0) {  // sparse block
             uint64_t overflow_pos = uint64_t(-block_pos - 1);
             return m_overflow_positions[overflow_pos + (i & (block_size - 1))];
         }
