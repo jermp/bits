@@ -35,9 +35,9 @@ namespace bits {
     The goal of this class is to support fast next_geq queries at the price
     of some space increase compared to an `elias_fano` sequence, so:
     - The low bits are always 8.
-    - We keep an array of H of size ceil(U/2^8), where H[i] indicates the
-      position of the i-th 0 in the high bit array. Each H[i] is written
-      in 1+log(n) bits because the high bit array has length <= 2n.
+    - We keep an array `hints_0` of size ceil(U/2^8), where `hints_0[i]` indicates the
+      position of the i-th 0 in the high bit array. (Each `hints_0[i]` is written
+      in log(n+U/2^8+1) bits.)
 */
 
 template <typename DArray1 = darray1>
@@ -52,8 +52,8 @@ struct endpoints_sequence {
         bit_vector::builder bvb_high_bits(num_high_bits);
         m_low_bits.reserve(n);
 
-        compact_vector::builder cv_builder((universe + 256 - 1) / 256,  // ceil(U/2^8)
-                                           util::ceil_log2_uint64(num_high_bits));
+        compact_vector::builder cvb_hints_0((universe + 256 - 1) / 256,  // ceil(U/2^8)
+                                            util::ceil_log2_uint64(num_high_bits));
 
         assert(*begin == 0);
         uint64_t prev_pos = 0;
@@ -63,25 +63,15 @@ struct endpoints_sequence {
             uint64_t high_part = v >> 8;
             uint64_t pos = high_part + i;
             bvb_high_bits.set(pos, 1);
-            for (uint64_t j = prev_pos + 1; j < pos; ++j) cv_builder.push_back(j);
+            for (uint64_t j = prev_pos + 1; j < pos; ++j) cvb_hints_0.push_back(j);
             prev_pos = pos;
             m_back = v;
         }
-        cv_builder.push_back(prev_pos + 1);
+        cvb_hints_0.push_back(prev_pos + 1);
 
         bvb_high_bits.build(m_high_bits);
         m_high_bits_d1.build(m_high_bits);
-        cv_builder.build(m_high_bits_d0);
-
-        // for (uint64_t i = 0; i != m_high_bits.num_bits(); ++i) {
-        //     std::cout << m_high_bits.get(i) << ' ';
-        // }
-        // std::cout << std::endl;
-        // auto it = m_high_bits_d0.begin();
-        // for (uint64_t i = 0; i != m_high_bits_d0.size(); ++i) {
-        //     std::cout << i << " : " << *it << '\n';
-        //     ++it;
-        // }
+        cvb_hints_0.build(m_hints_0);
     }
 
     struct iterator {
@@ -210,14 +200,14 @@ struct endpoints_sequence {
 
     uint64_t num_bytes() const {
         return sizeof(m_back) + m_high_bits.num_bytes() + m_high_bits_d1.num_bytes() +
-               m_high_bits_d0.num_bytes() + essentials::vec_bytes(m_low_bits);
+               m_hints_0.num_bytes() + essentials::vec_bytes(m_low_bits);
     }
 
     void swap(endpoints_sequence& other) {
         std::swap(m_back, other.m_back);
         m_high_bits.swap(other.m_high_bits);
         m_high_bits_d1.swap(other.m_high_bits_d1);
-        m_high_bits_d0.swap(other.m_high_bits_d0);
+        m_hints_0.swap(other.m_hints_0);
         m_low_bits.swap(other.m_low_bits);
     }
 
@@ -235,7 +225,7 @@ private:
     uint64_t m_back;
     bit_vector m_high_bits;
     DArray1 m_high_bits_d1;
-    compact_vector m_high_bits_d0;
+    compact_vector m_hints_0;
     std::vector<uint8_t> m_low_bits;
 
     template <typename Visitor, typename T>
@@ -243,7 +233,7 @@ private:
         visitor.visit(t.m_back);
         visitor.visit(t.m_high_bits);
         visitor.visit(t.m_high_bits_d1);
-        visitor.visit(t.m_high_bits_d0);
+        visitor.visit(t.m_hints_0);
         visitor.visit(t.m_low_bits);
     }
 
@@ -255,7 +245,7 @@ private:
         uint64_t p = 0;
         uint64_t begin = 0;
         if (h_x > 0) {
-            p = m_high_bits_d0.access(h_x - 1);
+            p = m_hints_0.access(h_x - 1);
             begin = p - h_x + 1;
         }
         assert(begin < size());
