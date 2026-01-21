@@ -24,8 +24,7 @@ namespace bits {
 
     Reference:
 
-    Ragnar Groot Koerkamp. 2025.
-    "PtrHash: Minimal Perfect Hashing at RAM Throughput",
+    Ragnar Groot Koerkamp. "PtrHash: Minimal Perfect Hashing at RAM Throughput", SEA 2025.
     https://arxiv.org/abs/2502.15539.
 
 */

@@ -251,7 +251,7 @@ private:
         assert(begin < size());
 
         /*
-            `begin` is the position of the elements that have high part >= h_x
+            `begin` is the position of the first element that has high part >= h_x
             and `p` is the position in `m_high_bits` of the (h_x-1)-th 0,
             so it is passed to the iterator as a hint to recover the high part
             of the element at position `begin` without doing a select_1.
