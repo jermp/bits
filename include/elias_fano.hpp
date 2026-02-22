@@ -46,14 +46,16 @@ struct elias_fano {
 
         /* This version takes at most: n*floor(log(U/n)) + 3*n bits */
         uint64_t l = uint64_t((n && universe / n) ? util::msb(universe / n) : 0);
+        // std::cout << "n=" << n << std::endl;
+        // std::cout << "U=" << universe << std::endl;
+        // std::cout << "l=" << l << std::endl;
 
-        /* This version takes at most: n*ceil(log(U/n)) + 2*n bits */
-        // uint64_t l = std::ceil(std::log2(static_cast<double>(universe) / n));
-
-        /*
-            Q. Which version is better?
-            A. It depends on the indexes built on the high_bits.
-        */
+        // uint64_t num_high_bits = n + (universe >> l) + 1;
+        // std::cout << "num_high_bits = " << num_high_bits << std::endl;
+        // std::cout << "total bits = " << (num_high_bits + n * l) << std::endl;
+        // std::cout << "(n*log(U/n)+2n) = " << n * (std::log2(static_cast<double>(universe) / n) +
+        // 2)
+        //           << std::endl;
 
         bit_vector::builder bvb_high_bits(n + (universe >> l) + 1);
         compact_vector::builder cvb_low_bits(n, l);
@@ -82,6 +84,12 @@ struct elias_fano {
             bvb_high_bits.set((v >> l) + i + encode_prefix_sum, 1);
             last = v;
         }
+
+        // std::cout << "high bits:\n";
+        // for (uint64_t i = 0; i != bvb_high_bits.num_bits(); ++i) {
+        //     std::cout << int(bvb_high_bits.get(i));
+        // }
+        // std::cout << std::endl;
 
         m_back = last;
         bvb_high_bits.build(m_high_bits);
@@ -248,6 +256,51 @@ struct elias_fano {
         if (ret.val > x) return {ret.pos - 1, ret.pos != 0 ? it.prev_value() : uint64_t(-1)};
         return ret;
     }
+
+    // /*
+    //     It is assumed that all elements are distinct.
+    // */
+    // return_value pred(const uint64_t x) const {
+    //     static_assert(index_zeros == true, "must build index on zeros");
+    //     assert(m_high_bits_d0.num_positions());
+
+    //     if (x > back()) return {size() - 1, back()};
+    //     if (x <= access(0)) return {uint64_t(-1), uint64_t(-1)};
+
+    //     uint64_t h_x = x >> m_low_bits.width();
+    //     uint64_t p = 0;
+    //     uint64_t begin = 0;
+    //     if (h_x > 0) {
+    //         p = m_high_bits_d0.select(m_high_bits, h_x - 1);
+    //         begin = p - h_x + 1;
+    //     }
+    //     assert(begin < size());
+
+    //     auto it = iterator(this, begin, p /* high hint */);
+    //     uint64_t pos = begin;
+    //     uint64_t val = it.value();
+
+    //     if (x <= val) {
+    //         assert(pos > 0);
+    //         return {pos - 1, it.prev_value()};
+    //     }
+
+    //     assert(val < x);
+    //     uint64_t prev = uint64_t(-1);
+    //     while (val < x) {
+    //         prev = val;
+    //         ++pos;
+    //         it.next();
+    //         val = it.value();
+    //     }
+    //     /* now pos is the position of the leftmost element that is >= x */
+    //     assert(val >= x);
+    //     assert(pos < size());
+    //     assert(val == access(pos));
+    //     assert(it.position() == pos);
+    //     assert(pos > 0);
+    //     return {pos - 1, prev};
+    // }
 
     /*
         Determine integers lo and hi, with lo < hi, such that lo <= x < hi

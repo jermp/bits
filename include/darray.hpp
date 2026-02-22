@@ -117,6 +117,18 @@ struct darray {
         m_subblock_inventory.swap(subblock_inventory);
         m_overflow_positions.swap(overflow_positions);
 
+        // std::cout << "I: ";
+        // for (auto x : m_block_inventory) { std::cout << x << ' '; }
+        // std::cout << std::endl;
+
+        // std::cout << "S: ";
+        // for (auto x : m_overflow_positions) { std::cout << x << ' '; }
+        // std::cout << std::endl;
+
+        // std::cout << "D: ";
+        // for (auto x : m_subblock_inventory) { std::cout << x << ' '; }
+        // std::cout << std::endl;
+
         // {
         //     std::cout << "num_blocks = " << m_block_inventory.size()
         //               << " (expected = " << ((m_positions + block_size - 1) / block_size) << ")"
@@ -219,7 +231,14 @@ protected:
                                 std::vector<uint16_t>& subblock_inventory,
                                 std::vector<uint64_t>& overflow_positions)  //
     {
-        if (cur_block_positions.back() - cur_block_positions.front() < (1ULL << 16))  // dense case
+        constexpr uint64_t T = 1ULL << 16;  // example from notes: T = 1ULL << 3
+        static_assert(T <= 1ULL << 16);
+
+        // std::cout << "cur_block_positions: ";
+        // for (auto x : cur_block_positions) { std::cout << x << ' '; }
+        // std::cout << std::endl;
+
+        if (cur_block_positions.back() - cur_block_positions.front() < T)  // dense case
         {
             block_inventory.push_back(int64_t(cur_block_positions.front()));
             for (uint64_t i = 0; i < cur_block_positions.size(); i += subblock_size) {

@@ -7,6 +7,7 @@ bit_vector encode_with_bit_vector(std::vector<uint64_t> const& seq, bool index_o
     std::cout << "encoding seq with a bit_vector..." << std::endl;
     std::cout << "seq.size() = " << seq.size() << std::endl;
     std::cout << "seq.back() = " << seq.back() << std::endl;
+    // bit_vector::builder bv_builder(50); // example from notes
     bit_vector::builder bv_builder(seq.back() + 1, !index_ones);
     for (auto x : seq) {
         bv_builder.set(x, index_ones);            // set bit at position x
@@ -23,6 +24,9 @@ bit_vector encode_with_bit_vector(std::vector<uint64_t> const& seq, bool index_o
 template <typename DArray, bool index_ones>
 void run_test(const uint64_t max_int) {
     constexpr bool all_distinct = true;
+    // Example from notes.
+    // std::vector<uint64_t> seq = {0,  1,  3,  5,  12, 15, 18, 19, 20,
+    //                              24, 29, 34, 36, 39, 40, 41, 42, 47};
     std::vector<uint64_t> seq = test::get_sorted_sequence(num_positions, max_int, all_distinct);
     auto bv = encode_with_bit_vector(seq, index_ones);
     DArray select_index;
@@ -54,6 +58,8 @@ void run_test(const uint64_t max_int) {
 
     std::cout << "EVERYTHING OK!" << std::endl;
 }
+
+// TEST_CASE("example-from-notes") { run_test<darray<util::identity_getter, 4, 2>, true>(0); }
 
 TEST_CASE("super_sparse1") { run_test<darray1, true>(32 * 1024); }
 TEST_CASE("super_sparse0") { run_test<darray0, false>(32 * 1024); }

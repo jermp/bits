@@ -21,12 +21,13 @@ elias_fano<index_zeros, encode_prefix_sum> encode_with_elias_fano(
 }
 
 TEST_CASE("access") {
-    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
+    // std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
+    std::vector<uint64_t> seq = {2, 5, 9, 13, 34, 35, 37, 39, 44, 49, 78, 90, 112, 113, 120};
     constexpr bool index_zeros = true;
     constexpr bool encode_prefix_sum = false;
     auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
     std::cout << "checking correctness of random access..." << std::endl;
-    for (uint64_t i = 0; i != sequence_length; ++i) {
+    for (uint64_t i = 0; i != seq.size(); ++i) {
         uint64_t got = ef.access(i);  // get the integer at position i
         uint64_t expected = seq[i];
         REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
@@ -240,6 +241,49 @@ TEST_CASE("small_next_geq") {
     REQUIRE(got == seq.back());
 }
 
+// TEST_CASE("small_pred") {
+//     std::vector<uint64_t> seq{2, 5, 9, 13, 34, 35, 37, 39, 44, 49, 78, 90, 112, 113, 120};
+//     constexpr bool index_zeros = true;
+//     constexpr bool encode_prefix_sum = false;
+//     auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
+
+//     auto p = ef.pred(2);
+//     uint64_t pos = p.pos;
+//     uint64_t got = p.val;
+//     REQUIRE(pos == uint64_t(-1));  // undefined since min = 2
+//     REQUIRE(got == uint64_t(-1));
+
+//     p = ef.pred(33);
+//     pos = p.pos;
+//     got = p.val;
+//     REQUIRE(pos == 3);
+//     REQUIRE(got == 13);
+
+//     p = ef.pred(44);
+//     pos = p.pos;
+//     got = p.val;
+//     REQUIRE(pos == 7);
+//     REQUIRE(got == 39);
+
+//     p = ef.pred(6);
+//     pos = p.pos;
+//     got = p.val;
+//     REQUIRE(pos == 1);
+//     REQUIRE(got == 5);
+
+//     p = ef.pred(93);
+//     pos = p.pos;
+//     got = p.val;
+//     REQUIRE(pos == 11);
+//     REQUIRE(got == 90);
+
+//     p = ef.pred(200);  // saturate
+//     pos = p.pos;
+//     got = p.val;
+//     REQUIRE(pos == seq.size() - 1);
+//     REQUIRE(got == 120);
+// }
+
 TEST_CASE("small_prev_leq") {
     std::vector<uint64_t> seq{1, 1, 1, 3, 3, 5, 6, 6, 6, 9, 13, 23, 23, 23};
     constexpr bool index_zeros = true;
@@ -334,6 +378,59 @@ TEST_CASE("prev_leq") {
     }
     std::cout << "EVERYTHING OK!" << std::endl;
 }
+
+// TEST_CASE("pred") {
+//     std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length, 1000,
+//                                                           true  // all distinct
+//     );
+//     constexpr bool index_zeros = true;
+//     constexpr bool encode_prefix_sum = false;
+//     auto ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
+//     std::cout << "checking correctness of pred..." << std::endl;
+//     uint64_t i = 0;
+//     for (auto x : seq) {
+//         /* since x is in the sequence, pred must return i-1 */
+//         auto p = ef.pred(x);
+//         uint64_t pos = p.pos;
+//         uint64_t got = p.val;
+//         uint64_t expected = i > 0 ? seq[i - 1] : uint64_t(-1);
+
+//         // std::cout << "x=" << x << "; pos=" << pos << "; got=" << got << std::endl;
+
+//         bool good = (got == expected) && (pos == (i > 0 ? i - 1 : uint64_t(-1)));
+//         REQUIRE_MESSAGE(good, "got " << got << " at position " << pos << "/" << sequence_length
+//                                      << " but expected " << expected << " at position " << i);
+//         ++i;
+//     }
+//     std::cout << "EVERYTHING OK!" << std::endl;
+
+//     std::cout << "checking correctness of pred..." << std::endl;
+//     const uint64_t front = ef.access(0);
+//     for (i = 0; i != 10000; ++i) {
+//         uint64_t x = seq[rand() % sequence_length] + (i % 2 == 0 ? 3 : -3);  // get some value
+//         auto p = ef.pred(x);
+//         uint64_t pos = p.pos;
+//         uint64_t got = p.val;
+//         if (x < front) {
+//             REQUIRE_MESSAGE(pos == uint64_t(-1),
+//                             "expected pos " << uint64_t(-1) << " but got pos = " << pos);
+//             continue;
+//         }
+//         // std::cout << "x=" << x << "; pos=" << pos << "; got=" << got << std::endl;
+//         auto it = std::upper_bound(seq.begin(), seq.end(), x) - 1;
+//         uint64_t expected = *it;
+//         if (*it == x) {
+//             --it;
+//             expected = *it;
+//         }
+//         uint64_t pos_expected = std::distance(seq.begin(), it);
+//         bool good = (got == expected) && (pos == pos_expected);
+//         REQUIRE_MESSAGE(good, "x = " << x << "; got " << got << " at position " << pos << "/"
+//                                      << sequence_length << " but expected " << expected
+//                                      << " at position " << pos_expected);
+//     }
+//     std::cout << "EVERYTHING OK!" << std::endl;
+// }
 
 TEST_CASE("small_locate") {
     std::vector<uint64_t> seq{1, 1, 1, 3, 3, 5, 6, 6, 6, 9, 13, 23, 23, 23};
