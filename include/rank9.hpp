@@ -46,7 +46,7 @@ struct rank9 {
     rank9() {}
 
     void build(bit_vector const& B) {
-        std::vector<uint64_t> const& data = B.data();
+        auto const& data = B.data();
         std::vector<uint64_t> block_rank_pairs;
         uint64_t next_rank = 0;
         uint64_t cur_subrank = 0;
@@ -81,7 +81,7 @@ struct rank9 {
             block_rank_pairs.push_back(0);
         }
 
-        m_block_rank_pairs.swap(block_rank_pairs);
+        m_block_rank_pairs = std::move(block_rank_pairs);
     }
 
     inline uint64_t num_ones() const { return *(m_block_rank_pairs.end() - 2); }
@@ -96,7 +96,7 @@ struct rank9 {
         uint64_t r = sub_block_rank(sub_block);
         uint64_t sub_left = i % 64;
         if (sub_left) {
-            std::vector<uint64_t> const& data = B.data();
+            auto const& data = B.data();
             r += util::popcount(data[sub_block] << (64 - sub_left));
         }
         return r;
@@ -146,7 +146,7 @@ private:
     }
 
     static const uint64_t block_size = 8;  // in 64bit words
-    std::vector<uint64_t> m_block_rank_pairs;
+    essentials::owning_span<uint64_t> m_block_rank_pairs;
 };
 
 }  // namespace bits

@@ -81,7 +81,7 @@ struct darray {
     darray() : m_positions(0) {}
 
     void build(bit_vector const& B) {
-        std::vector<uint64_t> const& data = B.data();
+        auto const& data = B.data();
         std::vector<uint64_t> cur_block_positions;
         std::vector<int64_t> block_inventory;
         std::vector<uint16_t> subblock_inventory;
@@ -113,9 +113,9 @@ struct darray {
             flush_cur_block(cur_block_positions, block_inventory, subblock_inventory,
                             overflow_positions);
         }
-        m_block_inventory.swap(block_inventory);
-        m_subblock_inventory.swap(subblock_inventory);
-        m_overflow_positions.swap(overflow_positions);
+        m_block_inventory = std::move(block_inventory);
+        m_subblock_inventory = std::move(subblock_inventory);
+        m_overflow_positions = std::move(overflow_positions);
 
         // std::cout << "I: ";
         // for (auto x : m_block_inventory) { std::cout << x << ' '; }
@@ -174,7 +174,7 @@ struct darray {
         uint64_t reminder = i & (subblock_size - 1);
         if (!reminder) return start_pos;
 
-        std::vector<uint64_t> const& data = B.data();
+        auto const& data = B.data();
         uint64_t word_idx = start_pos >> 6;
         uint64_t word_shift = start_pos & 63;
         uint64_t word = WordGetter()(data, word_idx) & (uint64_t(-1) << word_shift);
@@ -214,9 +214,9 @@ struct darray {
 
 protected:
     uint64_t m_positions;
-    std::vector<int64_t> m_block_inventory;
-    std::vector<uint16_t> m_subblock_inventory;
-    std::vector<uint64_t> m_overflow_positions;
+    essentials::owning_span<int64_t> m_block_inventory;
+    essentials::owning_span<uint16_t> m_subblock_inventory;
+    essentials::owning_span<uint64_t> m_overflow_positions;
 
     template <typename Visitor, typename T>
     static void visit_impl(Visitor& visitor, T&& t) {
@@ -262,11 +262,13 @@ protected:
 namespace util {
 
 struct identity_getter {
-    uint64_t operator()(std::vector<uint64_t> const& data, uint64_t i) const { return data[i]; }
+    template <typename Vec>
+    uint64_t operator()(Vec const& data, uint64_t i) const { return data[i]; }
 };
 
 struct negating_getter {
-    uint64_t operator()(std::vector<uint64_t> const& data, uint64_t i) const { return ~data[i]; }
+    template <typename Vec>
+    uint64_t operator()(Vec const& data, uint64_t i) const { return ~data[i]; }
 };
 
 }  // namespace util
