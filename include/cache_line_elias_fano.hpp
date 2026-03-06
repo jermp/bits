@@ -52,10 +52,9 @@ struct cache_line_elias_fano {
 
         const uint64_t num_blocks = (n + 44 - 1) / 44;
         const uint64_t num_bytes = num_blocks * 64;
-        m_bits.resize(num_bytes);
-        std::fill(m_bits.begin(), m_bits.end(), 0);
+        std::vector<uint8_t> bits(num_bytes);
 
-        uint8_t* high = m_bits.data();
+        uint8_t* high = bits.data();
         uint8_t* low = high + 4  // for lower bound high part of block
                        + 16;     // for high bits
 
@@ -100,6 +99,7 @@ struct cache_line_elias_fano {
         }
 
         m_back = last;
+        m_bits = essentials::owning_span<uint8_t>(std::move(bits));
     }
 
     uint64_t access(uint64_t i) const {
@@ -149,7 +149,7 @@ struct cache_line_elias_fano {
 private:
     uint64_t m_back;
     uint64_t m_size;
-    std::vector<uint8_t> m_bits;
+    essentials::owning_span<uint8_t> m_bits;
 
     template <typename Visitor, typename T>
     static void visit_impl(Visitor& visitor, T&& t) {

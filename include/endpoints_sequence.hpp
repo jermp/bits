@@ -50,7 +50,8 @@ struct endpoints_sequence {
 
         const uint64_t num_high_bits = n + (universe >> 8) + 1;
         bit_vector::builder bvb_high_bits(num_high_bits);
-        m_low_bits.reserve(n);
+        std::vector<uint8_t> low_bits;
+        low_bits.reserve(n);
 
         compact_vector::builder cvb_hints_0((universe + 256 - 1) / 256,  // ceil(U/2^8)
                                             util::ceil_log2_uint64(num_high_bits));
@@ -59,7 +60,7 @@ struct endpoints_sequence {
         uint64_t prev_pos = 0;
         for (uint64_t i = 0; i != n; ++i, ++begin) {
             auto v = *begin;
-            m_low_bits.push_back(v & 255);
+            low_bits.push_back(v & 255);
             uint64_t high_part = v >> 8;
             uint64_t pos = high_part + i;
             bvb_high_bits.set(pos, 1);
@@ -72,6 +73,7 @@ struct endpoints_sequence {
         bvb_high_bits.build(m_high_bits);
         m_high_bits_d1.build(m_high_bits);
         cvb_hints_0.build(m_hints_0);
+        m_low_bits = essentials::owning_span<uint8_t>(std::move(low_bits));
     }
 
     struct iterator {
@@ -141,7 +143,7 @@ struct endpoints_sequence {
         uint64_t m_pos;
         uint64_t m_val;
         bit_vector::iterator m_high_bits_it;
-        std::vector<uint8_t>::const_iterator m_low_bits_it;
+        const uint8_t* m_low_bits_it;
 
         void read_next_value() {
             assert(m_pos < m_ptr->size());
@@ -226,7 +228,7 @@ private:
     bit_vector m_high_bits;
     DArray1 m_high_bits_d1;
     compact_vector m_hints_0;
-    std::vector<uint8_t> m_low_bits;
+    essentials::owning_span<uint8_t> m_low_bits;
 
     template <typename Visitor, typename T>
     static void visit_impl(Visitor& visitor, T&& t) {
