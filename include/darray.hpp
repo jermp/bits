@@ -263,12 +263,16 @@ namespace util {
 
 struct identity_getter {
     template <typename Vec>
-    uint64_t operator()(Vec const& data, uint64_t i) const { return data[i]; }
+    uint64_t operator()(Vec const& data, uint64_t i) const {
+        return data[i];
+    }
 };
 
 struct negating_getter {
     template <typename Vec>
-    uint64_t operator()(Vec const& data, uint64_t i) const { return ~data[i]; }
+    uint64_t operator()(Vec const& data, uint64_t i) const {
+        return ~data[i];
+    }
 };
 
 }  // namespace util

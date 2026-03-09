@@ -99,8 +99,8 @@ static inline uint64_t select_in_word(uint64_t word, uint64_t i) {
     return s - 1;
 #else
     uint64_t k = 1ULL << i;
-    asm("pdep %[word], %[mask], %[word]" : [ word ] "+r"(word) : [ mask ] "r"(k));
-    asm("tzcnt %[bit], %[index]" : [ index ] "=r"(k) : [ bit ] "g"(word) : "cc");
+    asm("pdep %[word], %[mask], %[word]" : [word] "+r"(word) : [mask] "r"(k));
+    asm("tzcnt %[bit], %[index]" : [index] "=r"(k) : [bit] "g"(word) : "cc");
     return k;
 #endif
 }
