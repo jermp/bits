@@ -584,33 +584,6 @@ TEST_CASE("diff") {
     std::cout << "EVERYTHING OK!" << std::endl;
 }
 
-TEST_CASE("save_load_and_swap") {
-    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
-    constexpr bool index_zeros = true;
-    constexpr bool encode_prefix_sum = false;
-    using ef_type = elias_fano<index_zeros, encode_prefix_sum>;
-    ef_type ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
-    const std::string output_filename("ef.bin");
-    uint64_t num_saved_bytes = essentials::save(ef, output_filename.c_str());
-    std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
-    ef_type ef_loaded;
-    uint64_t num_loaded_bytes = essentials::load(ef_loaded, output_filename.c_str());
-    std::cout << "num_loaded_bytes = " << num_loaded_bytes << std::endl;
-    std::remove(output_filename.c_str());
-    REQUIRE(num_saved_bytes == num_loaded_bytes);
-    std::cout << "checking correctness of iterator..." << std::endl;
-    ef_type other;
-    ef_loaded.swap(other);
-    auto it = other.begin();
-    for (uint64_t i = 0; i != sequence_length; ++i, it.next()) {
-        uint64_t got = it.value();
-        uint64_t expected = seq[i];
-        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
-                                                << sequence_length << " but expected " << expected);
-    }
-    std::cout << "EVERYTHING OK!" << std::endl;
-}
-
 TEST_CASE("build_from_compact_vector_iterator") {
     std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
     constexpr bool index_zeros = true;
@@ -631,6 +604,33 @@ TEST_CASE("build_from_compact_vector_iterator") {
         std::cout << "measured bits/int = " << (8.0 * ef.num_bytes()) / ef.size() << std::endl;
     }
     auto it = ef.begin();
+    for (uint64_t i = 0; i != sequence_length; ++i, it.next()) {
+        uint64_t got = it.value();
+        uint64_t expected = seq[i];
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
+                                                << sequence_length << " but expected " << expected);
+    }
+    std::cout << "EVERYTHING OK!" << std::endl;
+}
+
+TEST_CASE("save_load_and_swap") {
+    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
+    constexpr bool index_zeros = true;
+    constexpr bool encode_prefix_sum = false;
+    using ef_type = elias_fano<index_zeros, encode_prefix_sum>;
+    ef_type ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
+    const std::string output_filename("ef.bin");
+    uint64_t num_saved_bytes = essentials::save(ef, output_filename.c_str());
+    std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    ef_type ef_loaded;
+    uint64_t num_loaded_bytes = essentials::load(ef_loaded, output_filename.c_str());
+    std::cout << "num_loaded_bytes = " << num_loaded_bytes << std::endl;
+    std::remove(output_filename.c_str());
+    REQUIRE(num_saved_bytes == num_loaded_bytes);
+    std::cout << "checking correctness of iterator..." << std::endl;
+    ef_type other;
+    ef_loaded.swap(other);
+    auto it = other.begin();
     for (uint64_t i = 0; i != sequence_length; ++i, it.next()) {
         uint64_t got = it.value();
         uint64_t expected = seq[i];

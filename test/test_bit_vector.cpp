@@ -173,11 +173,17 @@ TEST_CASE("save_load_and_swap") {
     for (uint64_t i = 0; i != sequence_length; ++i) {
         bv_builder.set(i * width);  // ones are spaced apart by width
     }
-    bit_vector bv;
-    bv_builder.build(bv);
+
     const std::string output_filename("bv.bin");
-    uint64_t num_saved_bytes = essentials::save(bv, output_filename.c_str());
-    std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    uint64_t num_saved_bytes = 0;
+
+    {
+        bit_vector bv;
+        bv_builder.build(bv);
+        num_saved_bytes = essentials::save(bv, output_filename.c_str());
+        std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    }
+
     bit_vector bv_loaded;
     uint64_t num_loaded_bytes = essentials::load(bv_loaded, output_filename.c_str());
     std::cout << "num_loaded_bytes = " << num_loaded_bytes << std::endl;
@@ -197,4 +203,43 @@ TEST_CASE("save_load_and_swap") {
         }
     }
     std::cout << "EVERYTHING OK!" << std::endl;
+}
+
+TEST_CASE("save_mmap") {
+    const uint64_t width = test::get_random_uint(100) + 1;  // at least 1
+    std::cout << "width = " << width << std::endl;
+    bit_vector::builder bv_builder(sequence_length * width);
+    for (uint64_t i = 0; i != sequence_length; ++i) {
+        bv_builder.set(i * width);  // ones are spaced apart by width
+    }
+
+    const std::string output_filename("bv.bin");
+
+    {
+        bit_vector bv;
+        bv_builder.build(bv);
+        uint64_t num_saved_bytes = essentials::save(bv, output_filename.c_str());
+        std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    }
+
+    {
+        bit_vector bv_mmapped;
+        auto mmap_owner = essentials::mmap(bv_mmapped, output_filename.c_str());
+        std::cout << "checking correctness of bit_vector::iterator::prev..." << std::endl;
+        REQUIRE(bv_mmapped.num_bits() == sequence_length * width);
+        for (uint64_t i = 0; i != bv_mmapped.num_bits(); ++i) {
+            if (i % width == 0) {
+                REQUIRE_MESSAGE(bv_mmapped.get(i) == true, i << "/" << bv_mmapped.num_bits()
+                                                             << ": got " << int(bv_mmapped.get(i))
+                                                             << " but expected 1");
+            } else {
+                REQUIRE_MESSAGE(bv_mmapped.get(i) == false, i << "/" << bv_mmapped.num_bits()
+                                                              << ": got " << int(bv_mmapped.get(i))
+                                                              << " but expected 0");
+            }
+        }
+        std::cout << "EVERYTHING OK!" << std::endl;
+    }
+
+    std::remove(output_filename.c_str());
 }
