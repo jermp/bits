@@ -72,3 +72,41 @@ TEST_CASE("save_load_and_access") {
     }
     std::cout << "EVERYTHING OK!" << std::endl;
 }
+
+TEST_CASE("save_mmap_rice_sequence") {
+    uint64_t max_small_value = test::get_random_uint() % 5;
+    if (max_small_value == 0) max_small_value = 1;
+    uint64_t max_large_value = test::get_random_uint() % 100000;
+    if (max_large_value == 0) max_large_value = 100;
+    std::cout << "max_small_value = " << max_small_value << std::endl;
+    std::cout << "max_large_value = " << max_large_value << std::endl;
+
+    std::vector<uint64_t> seq =
+        test::get_skewed_sequence(sequence_length, max_small_value, max_large_value, 0.95);
+    const std::string output_filename("rs.bin");
+    uint64_t num_saved_bytes = 0;
+    uint64_t num_mapped_bytes = 0;
+
+    {
+        auto rs = encode_with_rice_sequence(seq);
+        num_saved_bytes = essentials::save(rs, output_filename.c_str());
+        std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    }
+
+    {
+        rice_sequence<> rs_mmapped;
+        num_mapped_bytes = essentials::mmap(rs_mmapped, output_filename.c_str());
+        std::cout << "num_mapped_bytes = " << num_mapped_bytes << std::endl;
+        REQUIRE(num_saved_bytes == num_mapped_bytes);
+
+        std::cout << "checking correctness of access..." << std::endl;
+        for (uint64_t i = 0; i != seq.size(); ++i) {
+            uint64_t got = rs_mmapped.access(i);
+            REQUIRE_MESSAGE(got == seq[i], "got " << got << " at position " << i << "/"
+                                                  << seq.size() << " but expected " << seq[i]);
+        }
+        std::cout << "EVERYTHING OK!" << std::endl;
+    }
+
+    std::remove(output_filename.c_str());
+}

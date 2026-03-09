@@ -214,17 +214,22 @@ TEST_CASE("save_mmap") {
     }
 
     const std::string output_filename("bv.bin");
+    uint64_t num_saved_bytes = 0;
+    uint64_t num_mapped_bytes = 0;
 
     {
         bit_vector bv;
         bv_builder.build(bv);
-        uint64_t num_saved_bytes = essentials::save(bv, output_filename.c_str());
+        num_saved_bytes = essentials::save(bv, output_filename.c_str());
         std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
     }
 
     {
         bit_vector bv_mmapped;
-        auto mmap_owner = essentials::mmap(bv_mmapped, output_filename.c_str());
+        num_mapped_bytes = essentials::mmap(bv_mmapped, output_filename.c_str());
+        std::cout << "num_mapped_bytes = " << num_mapped_bytes << std::endl;
+        REQUIRE(num_saved_bytes == num_mapped_bytes);
+
         std::cout << "checking correctness of bit_vector::iterator::prev..." << std::endl;
         REQUIRE(bv_mmapped.num_bits() == sequence_length * width);
         for (uint64_t i = 0; i != bv_mmapped.num_bits(); ++i) {

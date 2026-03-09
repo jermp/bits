@@ -76,3 +76,96 @@ TEST_CASE("sparse") { run_test(128); }
 TEST_CASE("dense") { run_test(32); }
 TEST_CASE("very_dense") { run_test(8); }
 TEST_CASE("super_dense") { run_test(2); }
+
+void test_save_load_swap(const uint64_t max_int) {
+    constexpr bool all_distinct = true;
+    std::vector<uint64_t> seq = test::get_sorted_sequence(num_positions, max_int, all_distinct);
+    auto [B, rank_index] = encode_with_ranked_bit_vector(seq);
+
+    const std::string output_filename("r9_swap.bin");
+    uint64_t num_saved_bytes = 0;
+
+    {
+        // Assertions on original
+        REQUIRE(rank_index.num_ones() == seq.size());
+        REQUIRE(rank_index.rank1(B, 0) == 0);
+
+        num_saved_bytes = essentials::save(rank_index, output_filename.c_str());
+        std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    }
+
+    rank9 rank_index_loaded;
+    uint64_t num_loaded_bytes = essentials::load(rank_index_loaded, output_filename.c_str());
+    std::cout << "num_loaded_bytes = " << num_loaded_bytes << std::endl;
+    REQUIRE(num_saved_bytes == num_loaded_bytes);
+
+    std::cout << "checking correctness of rank1 and rank0 after swap..." << std::endl;
+    rank9 other;
+    rank_index_loaded.swap(other);
+
+    REQUIRE(other.num_ones() == seq.size());
+    REQUIRE(other.rank1(B, 0) == 0);
+    for (uint64_t i = 0; i != seq.size(); ++i) {
+        uint64_t j = seq[i];
+        uint64_t num_ones = other.rank1(B, j);   // number of 1s in B[0..j)
+        uint64_t num_zeros = other.rank0(B, j);  // number of 0s in B[0..j)
+        REQUIRE(num_ones + num_zeros == j);
+        REQUIRE_MESSAGE(num_ones == i, "got " << num_ones << " but expected " << i);
+        REQUIRE_MESSAGE(num_zeros == j - i, "got " << num_zeros << " but expected " << j - i);
+    }
+
+    std::remove(output_filename.c_str());
+    std::cout << "EVERYTHING OK!" << std::endl;
+}
+
+void test_save_mmap(const uint64_t max_int) {
+    constexpr bool all_distinct = true;
+    std::vector<uint64_t> seq = test::get_sorted_sequence(num_positions, max_int, all_distinct);
+    auto [B, rank_index] = encode_with_ranked_bit_vector(seq);
+
+    const std::string output_filename("r9_mmap.bin");
+    uint64_t num_saved_bytes = 0;
+    uint64_t num_mapped_bytes = 0;
+
+    {
+        num_saved_bytes = essentials::save(rank_index, output_filename.c_str());
+        std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    }
+
+    {
+        rank9 rank_index_mmapped;
+        num_mapped_bytes = essentials::mmap(rank_index_mmapped, output_filename.c_str());
+        std::cout << "num_mapped_bytes = " << num_mapped_bytes << std::endl;
+        REQUIRE(num_saved_bytes == num_mapped_bytes);
+
+        std::cout << "checking correctness of rank1 and rank0 after mmap..." << std::endl;
+        REQUIRE(rank_index_mmapped.num_ones() == seq.size());
+        REQUIRE(rank_index_mmapped.rank1(B, 0) == 0);
+
+        for (uint64_t i = 0; i != seq.size(); ++i) {
+            uint64_t j = seq[i];
+            uint64_t num_ones = rank_index_mmapped.rank1(B, j);
+            uint64_t num_zeros = rank_index_mmapped.rank0(B, j);
+            REQUIRE(num_ones + num_zeros == j);
+            REQUIRE_MESSAGE(num_ones == i, "got " << num_ones << " but expected " << i);
+            REQUIRE_MESSAGE(num_zeros == j - i, "got " << num_zeros << " but expected " << j - i);
+        }
+        std::cout << "EVERYTHING OK!" << std::endl;
+    }
+
+    std::remove(output_filename.c_str());
+}
+
+TEST_CASE("rank9_save_load_swap_super_sparse") { test_save_load_swap(32 * 1024); }
+TEST_CASE("rank9_save_load_swap_very_sparse") { test_save_load_swap(1024); }
+TEST_CASE("rank9_save_load_swap_sparse") { test_save_load_swap(128); }
+TEST_CASE("rank9_save_load_swap_dense") { test_save_load_swap(32); }
+TEST_CASE("rank9_save_load_swap_very_dense") { test_save_load_swap(8); }
+TEST_CASE("rank9_save_load_swap_super_dense") { test_save_load_swap(2); }
+
+TEST_CASE("rank9_save_mmap_super_sparse") { test_save_mmap(32 * 1024); }
+TEST_CASE("rank9_save_mmap_very_sparse") { test_save_mmap(1024); }
+TEST_CASE("rank9_save_mmap_sparse") { test_save_mmap(128); }
+TEST_CASE("rank9_save_mmap_dense") { test_save_mmap(32); }
+TEST_CASE("rank9_save_mmap_very_dense") { test_save_mmap(8); }
+TEST_CASE("rank9_save_mmap_super_dense") { test_save_mmap(2); }

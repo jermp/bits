@@ -232,3 +232,68 @@ TEST_CASE("locate") {
 
     std::cout << "EVERYTHING OK!" << std::endl;
 }
+
+TEST_CASE("endpoints_sequence_save_load_swap") {
+    std::vector<uint64_t> seq = get_sequence(sequence_length);
+    const std::string output_filename("es_swap.bin");
+    uint64_t num_saved_bytes = 0;
+
+    {
+        auto es = encode(seq);
+        num_saved_bytes = essentials::save(es, output_filename.c_str());
+        std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    }
+
+    endpoints_sequence<> es_loaded;
+    uint64_t num_loaded_bytes = essentials::load(es_loaded, output_filename.c_str());
+    std::cout << "num_loaded_bytes = " << num_loaded_bytes << std::endl;
+    REQUIRE(num_saved_bytes == num_loaded_bytes);
+
+    std::cout << "checking correctness of access after swap..." << std::endl;
+    endpoints_sequence<> other;
+    es_loaded.swap(other);
+
+    REQUIRE(other.size() == seq.size());
+    for (uint64_t i = 0; i != seq.size(); ++i) {
+        uint64_t got = other.access(i);
+        uint64_t expected = seq[i];
+        REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/" << seq.size()
+                                                << " but expected " << expected);
+    }
+
+    std::remove(output_filename.c_str());
+    std::cout << "EVERYTHING OK!" << std::endl;
+}
+
+TEST_CASE("endpoints_sequence_save_mmap") {
+    std::vector<uint64_t> seq = get_sequence(sequence_length);
+    const std::string output_filename("es_mmap.bin");
+    uint64_t num_saved_bytes = 0;
+    uint64_t num_mapped_bytes = 0;
+
+    {
+        auto es = encode(seq);
+        num_saved_bytes = essentials::save(es, output_filename.c_str());
+        std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    }
+
+    {
+        endpoints_sequence<> es_mmapped;
+        num_mapped_bytes = essentials::mmap(es_mmapped, output_filename.c_str());
+        std::cout << "num_mapped_bytes = " << num_mapped_bytes << std::endl;
+        REQUIRE(num_saved_bytes == num_mapped_bytes);
+
+        std::cout << "checking correctness of access after mmap..." << std::endl;
+        REQUIRE(es_mmapped.size() == seq.size());
+
+        for (uint64_t i = 0; i != seq.size(); ++i) {
+            uint64_t got = es_mmapped.access(i);
+            uint64_t expected = seq[i];
+            REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
+                                                    << seq.size() << " but expected " << expected);
+        }
+        std::cout << "EVERYTHING OK!" << std::endl;
+    }
+
+    std::remove(output_filename.c_str());
+}

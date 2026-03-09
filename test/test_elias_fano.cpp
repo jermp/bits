@@ -639,3 +639,39 @@ TEST_CASE("save_load_and_swap") {
     }
     std::cout << "EVERYTHING OK!" << std::endl;
 }
+
+TEST_CASE("save_mmap_elias_fano") {
+    std::vector<uint64_t> seq = test::get_sorted_sequence(sequence_length);
+    constexpr bool index_zeros = true;
+    constexpr bool encode_prefix_sum = false;
+    using ef_type = elias_fano<index_zeros, encode_prefix_sum>;
+    const std::string output_filename("ef.bin");
+    uint64_t num_saved_bytes = 0;
+    uint64_t num_mapped_bytes = 0;
+
+    {
+        ef_type ef = encode_with_elias_fano<index_zeros, encode_prefix_sum>(seq);
+        num_saved_bytes = essentials::save(ef, output_filename.c_str());
+        std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    }
+
+    {
+        ef_type ef_mmapped;
+        num_mapped_bytes = essentials::mmap(ef_mmapped, output_filename.c_str());
+        std::cout << "num_mapped_bytes = " << num_mapped_bytes << std::endl;
+        REQUIRE(num_saved_bytes == num_mapped_bytes);
+
+        std::cout << "checking correctness of iterator..." << std::endl;
+        auto it = ef_mmapped.begin();
+        for (uint64_t i = 0; i != sequence_length; ++i, it.next()) {
+            uint64_t got = it.value();
+            uint64_t expected = seq[i];
+            REQUIRE_MESSAGE(got == expected, "got " << got << " at position " << i << "/"
+                                                    << sequence_length << " but expected "
+                                                    << expected);
+        }
+        std::cout << "EVERYTHING OK!" << std::endl;
+    }
+
+    std::remove(output_filename.c_str());
+}

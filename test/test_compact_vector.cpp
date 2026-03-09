@@ -151,3 +151,35 @@ TEST_CASE("save_load_and_swap") {
     }
     std::cout << "EVERYTHING OK!" << std::endl;
 }
+
+TEST_CASE("save_mmap_compact_vector") {
+    const uint64_t max_int = test::get_random_uint();
+    std::cout << "max_int = " << max_int << std::endl;
+    std::vector<uint64_t> seq = test::get_sequence(sequence_length, max_int);
+    const std::string output_filename("cv.bin");
+    uint64_t num_saved_bytes = 0;
+    uint64_t num_mapped_bytes = 0;
+
+    {
+        auto cv = encode_with_compact_vector(seq);
+        num_saved_bytes = essentials::save(cv, output_filename.c_str());
+        std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    }
+
+    {
+        compact_vector cv_mmapped;
+        num_mapped_bytes = essentials::mmap(cv_mmapped, output_filename.c_str());
+        std::cout << "num_mapped_bytes = " << num_mapped_bytes << std::endl;
+        REQUIRE(num_saved_bytes == num_mapped_bytes);
+
+        std::cout << "checking correctness of iterator..." << std::endl;
+        auto it = cv_mmapped.begin();
+        for (uint64_t i = 0; i != seq.size(); ++i, ++it) {
+            REQUIRE_MESSAGE(*it == seq[i], "got " << *it << " at position " << i << "/"
+                                                  << seq.size() << " but expected " << seq[i]);
+        }
+        std::cout << "EVERYTHING OK!" << std::endl;
+    }
+
+    std::remove(output_filename.c_str());
+}

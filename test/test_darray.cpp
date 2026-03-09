@@ -78,3 +78,93 @@ TEST_CASE("very_dense0") { run_test<darray0, false>(8); }
 
 TEST_CASE("super_dense1") { run_test<darray1, true>(2); }
 TEST_CASE("super_dense0") { run_test<darray0, false>(2); }
+
+template <typename DArray, bool index_ones>
+void test_save_load_swap(const uint64_t max_int) {
+    constexpr bool all_distinct = true;
+    std::vector<uint64_t> seq = test::get_sorted_sequence(num_positions, max_int, all_distinct);
+    auto bv = encode_with_bit_vector(seq, index_ones);
+
+    const std::string output_filename("darray_swap.bin");
+    uint64_t num_saved_bytes = 0;
+
+    {
+        DArray select_index;
+        select_index.build(bv);
+        REQUIRE(select_index.num_positions() == seq.size());
+
+        // Save to disk
+        num_saved_bytes = essentials::save(select_index, output_filename.c_str());
+        std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    }
+
+    DArray select_index_loaded;
+    uint64_t num_loaded_bytes = essentials::load(select_index_loaded, output_filename.c_str());
+    std::cout << "num_loaded_bytes = " << num_loaded_bytes << std::endl;
+    REQUIRE(num_saved_bytes == num_loaded_bytes);
+
+    std::cout << "checking correctness of swap and select..." << std::endl;
+    DArray other;
+    select_index_loaded.swap(other);
+
+    REQUIRE(other.num_positions() == seq.size());
+    for (uint64_t i = 0; i != seq.size(); ++i) {
+        uint64_t pos = other.select(bv, i);
+        REQUIRE_MESSAGE(pos == seq[i], "got " << pos << " but expected " << seq[i]);
+    }
+
+    std::remove(output_filename.c_str());
+    std::cout << "EVERYTHING OK!" << std::endl;
+}
+
+template <typename DArray, bool index_ones>
+void test_save_mmap(const uint64_t max_int) {
+    constexpr bool all_distinct = true;
+    std::vector<uint64_t> seq = test::get_sorted_sequence(num_positions, max_int, all_distinct);
+
+    // The bit_vector must remain alive for the mmapped select_index to use it
+    auto bv = encode_with_bit_vector(seq, index_ones);
+
+    const std::string output_filename("darray_mmap.bin");
+    uint64_t num_saved_bytes = 0;
+    uint64_t num_mapped_bytes = 0;
+
+    {
+        DArray select_index;
+        select_index.build(bv);
+        REQUIRE(select_index.num_positions() == seq.size());
+
+        num_saved_bytes = essentials::save(select_index, output_filename.c_str());
+        std::cout << "num_saved_bytes = " << num_saved_bytes << std::endl;
+    }
+
+    {
+        DArray select_index_mmapped;
+        num_mapped_bytes = essentials::mmap(select_index_mmapped, output_filename.c_str());
+        std::cout << "num_mapped_bytes = " << num_mapped_bytes << std::endl;
+        REQUIRE(num_saved_bytes == num_mapped_bytes);
+
+        std::cout << "checking correctness of mmapped select..." << std::endl;
+        REQUIRE(select_index_mmapped.num_positions() == seq.size());
+
+        for (uint64_t i = 0; i != seq.size(); ++i) {
+            uint64_t pos = select_index_mmapped.select(bv, i);
+            REQUIRE_MESSAGE(pos == seq[i], "got " << pos << " but expected " << seq[i]);
+        }
+        std::cout << "EVERYTHING OK!" << std::endl;
+    }
+
+    std::remove(output_filename.c_str());
+}
+
+TEST_CASE("darray_save_load_swap_super_sparse1") { test_save_load_swap<darray1, true>(32 * 1024); }
+TEST_CASE("darray_save_load_swap_super_sparse0") { test_save_load_swap<darray0, false>(32 * 1024); }
+
+TEST_CASE("darray_save_load_swap_dense1") { test_save_load_swap<darray1, true>(32); }
+TEST_CASE("darray_save_load_swap_dense0") { test_save_load_swap<darray0, false>(32); }
+
+TEST_CASE("darray_save_mmap_super_sparse1") { test_save_mmap<darray1, true>(32 * 1024); }
+TEST_CASE("darray_save_mmap_super_sparse0") { test_save_mmap<darray0, false>(32 * 1024); }
+
+TEST_CASE("darray_save_mmap_dense1") { test_save_mmap<darray1, true>(32); }
+TEST_CASE("darray_save_mmap_dense0") { test_save_mmap<darray0, false>(32); }
