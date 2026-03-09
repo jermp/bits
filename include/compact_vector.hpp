@@ -195,7 +195,7 @@ struct compact_vector  //
             cv.m_size = m_size;
             cv.m_width = m_width;
             cv.m_mask = m_mask;
-            cv.m_data.swap(m_data);
+            cv.m_data = std::move(m_data);
             builder().swap(*this);
         }
 
@@ -262,7 +262,7 @@ struct compact_vector  //
     uint64_t back() const { return operator[](size() - 1); }
     uint64_t size() const { return m_size; }
     uint64_t width() const { return m_width; }
-    std::vector<uint64_t> const& data() const { return m_data; }
+    essentials::owning_span<uint64_t> const& data() const { return m_data; }
 
     typedef enumerator<compact_vector> iterator;
     iterator get_iterator_at(uint64_t pos) const { return iterator(this, pos); }
@@ -293,7 +293,7 @@ private:
     uint64_t m_size;
     uint64_t m_width;
     uint64_t m_mask;
-    std::vector<uint64_t> m_data;
+    essentials::owning_span<uint64_t> m_data;
 
     template <typename Visitor, typename T>
     static void visit_impl(Visitor& visitor, T&& t) {
