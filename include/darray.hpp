@@ -34,8 +34,8 @@ namespace bits {
       in `overflow_positions` of the 1-bit positions of the block i if it is sparse.
       Its space is m/L*64 bits.
     - An array `overflow_positions` holding the positions of the L ones
-      in sparse blocks. As we have at most m/L2 sparse blocks, its space is
-      m/L2*L*64 bits at most.
+      in sparse blocks. As we have at most n/L2 sparse blocks, its space is
+      n/L2*L*64 bits at most.
     - An array `subblock_inventory[0..m/L3)` such that `subblock_inventory[i]`
       holds the result of Select(iL3). Its space is m/L3*log2(L2) bits.
 
@@ -61,15 +61,11 @@ namespace bits {
 
     For these block sizes, we have a space usage of at most:
     m/2^10*64 (block_inventory) +
-    m/2^16*2^10*64 + (sparse blocks) +
-    m/2^5*2^4 (dense blocks) =
-    25/16 m = 1.5625 m bits.
+    n/2^16*2^10*64 (sparse blocks) +
+    m/2^5*2^4 (dense blocks).
 
     (When used to index the high bitvector of Elias-Fano, sparse blocks are rare;
      so the space usage is likely close to 9/16 m.)
-
-    If 0.0 <= d = m/n <= 1.0 is the density of the bitvector, the index costs at most
-    25/16 dn extra bits, for a total of n(1+25/16d) bits.
 */
 
 template <                       //
