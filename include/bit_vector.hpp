@@ -19,7 +19,6 @@ struct bit_vector  //
         void clear() {
             m_num_bits = 0;
             m_data.clear();
-            m_cur_word = nullptr;
         }
 
         void fill(bool init = 0) { std::fill(m_data.begin(), m_data.end(), uint64_t(-init)); }
@@ -27,11 +26,8 @@ struct bit_vector  //
         void resize(uint64_t num_bits, bool init = 0) {
             m_num_bits = num_bits;
             m_data.resize(essentials::words_for<uint64_t>(num_bits), uint64_t(-init));
-            if (num_bits) {
-                m_cur_word = &m_data.back();
-                if (init && (num_bits & 63)) {
-                    *m_cur_word >>= 64 - (num_bits & 63);  // clear padding bits
-                }
+            if (init && (num_bits & 63)) {
+                m_data.back() >>= 64 - (num_bits & 63);  // clear padding bits
             }
         }
 
@@ -47,17 +43,13 @@ struct bit_vector  //
 
         void swap(builder& other) {
             std::swap(m_num_bits, other.m_num_bits);
-            std::swap(m_cur_word, other.m_cur_word);
             m_data.swap(other.m_data);
         }
 
         void push_back(bool b) {
             uint64_t pos_in_word = m_num_bits & 63;
-            if (pos_in_word == 0) {
-                m_data.push_back(0);
-                m_cur_word = &m_data.back();
-            }
-            *m_cur_word |= (uint64_t)b << pos_in_word;
+            if (pos_in_word == 0) m_data.push_back(0);
+            m_data.back() |= (uint64_t)b << pos_in_word;
             ++m_num_bits;
         }
 
@@ -100,15 +92,16 @@ struct bit_vector  //
             assert(len <= 64);
             assert(len == 64 || (bits >> len) == 0);
             if (!len) return;
-            uint64_t pos_in_word = m_num_bits & 63;
+            const unsigned pos_in_word = m_num_bits & 63;
             m_num_bits += len;
-            if (pos_in_word == 0) {
-                m_data.push_back(bits);
-            } else {
-                *m_cur_word |= bits << pos_in_word;
-                if (len > 64 - pos_in_word) m_data.push_back(bits >> (64 - pos_in_word));
+            if (pos_in_word != 0) {
+                m_data.back() |= bits << pos_in_word;
+                const unsigned remaining = 64 - pos_in_word;
+                if (len <= remaining) return;
+                bits >>= remaining;
             }
-            m_cur_word = &m_data.back();
+            // Assign after growth so the packed value need not be passed by reference.
+            m_data.emplace_back() = bits;
         }
 
         uint64_t get_word64(uint64_t pos) const {
@@ -140,7 +133,6 @@ struct bit_vector  //
                 *cur_word |= rhs.m_data.back() << shift;
                 if (cur_word < &m_data.back()) *++cur_word = rhs.m_data.back() >> (64 - shift);
             }
-            m_cur_word = &m_data.back();
         }
 
         uint64_t num_bits() const { return m_num_bits; }
@@ -150,7 +142,6 @@ struct bit_vector  //
 
     private:
         uint64_t m_num_bits;
-        uint64_t* m_cur_word;
         std::vector<uint64_t> m_data;
     };
 
