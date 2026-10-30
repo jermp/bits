@@ -3,6 +3,28 @@
 
 constexpr uint64_t sequence_length = 10000;
 
+TEST_CASE("bit_vector::builder::append_bits") {
+    for (bool reserved : {false, true}) {
+        for (uint64_t offset = 0; offset < 64; ++offset) {
+            bit_vector::builder b;
+            if (reserved) b.reserve(4096);
+            std::vector<bool> expected(offset, true);
+            b.append_bits((uint64_t(1) << offset) - 1, offset);
+            for (uint64_t len = 0; len <= 64; ++len) {
+                const uint64_t word = len == 64 ? uint64_t(-1) : (uint64_t(1) << len) - 1;
+                b.append_bits(word, len);
+                expected.insert(expected.end(), len, true);
+                b.append_bits(0, len);
+                expected.insert(expected.end(), len, false);
+                b.push_back(true);
+                expected.push_back(true);
+                REQUIRE(b.num_bits() == expected.size());
+                for (uint64_t i = 0; i < expected.size(); ++i) REQUIRE(b.get(i) == expected[i]);
+            }
+        }
+    }
+}
+
 TEST_CASE("bit_vector::builder::get_bits") {
     const uint64_t max_int = test::get_random_uint();
     std::cout << "max_int = " << max_int << std::endl;
